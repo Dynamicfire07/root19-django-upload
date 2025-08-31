@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Activity</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+{% include 'navbar.html' %}
+<div class="container mt-4">
+    <h1>User Activity</h1>
+    <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Users</h6>
+                    <p class="card-text fw-bold">{{ summary.total_users }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Questions</h6>
+                    <p class="card-text fw-bold">{{ summary.total_questions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Activity Records</h6>
+                    <p class="card-text fw-bold">{{ summary.total_records }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Solved</h6>
+                    <p class="card-text fw-bold">{{ summary.solved }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Correct</h6>
+                    <p class="card-text fw-bold">{{ summary.correct }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Starred</h6>
+                    <p class="card-text fw-bold">{{ summary.starred }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="card-title">Bookmarked</h6>
+                    <p class="card-text fw-bold">{{ summary.bookmarked }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Question ID</th>
+                <th>Solved</th>
+                <th>Correct</th>
+                <th>Bookmarked</th>
+                <th>Starred</th>
+                <th>Times Viewed</th>
+                <th>Time Spent (seconds)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in records %}
+            <tr>
+                <td>{{ a.user_id }}</td>
+                <td>{{ a.question_id }}</td>
+                <td>{{ a.solved }}</td>
+                <td>{{ a.correct }}</td>
+                <td>{{ a.bookmarked }}</td>
+                <td>{{ a.starred }}</td>
+                <td>{{ a.times_viewed }}</td>
+                <td>{% if a.time_took %}{{ a.time_took.total_seconds }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

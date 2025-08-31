@@ -1,0 +1,225 @@
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.contrib import messages
+from django.contrib.sessions.models import Session
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password, check_password
+
+from .db import (
+    query_one,
+    query_all,
+    execute,
+    get_next_user_id,
+    get_or_create_activity,
+)
+from types import SimpleNamespace
+
+def register(request):
+    """Handle user registration."""
+    if request.method == 'POST':
+        name = request.POST['name']
+        email = request.POST['email']
+        password = request.POST['password']
+        confirmation_password = request.POST['confirmation_password']
+        role = request.POST['role']
+        school = request.POST['school']
+
+        # Check if passwords match
+        if password != confirmation_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect('register')
+
+        # Check if user already exists in the users table
+        if query_one("SELECT 1 FROM users WHERE email = %s", (email,)):
+            messages.error(request, "Email is already registered.")
+            return redirect('register')
+
+        # Hash the password before storing
+        hashed_password = make_password(password)
+
+        # Insert the user into PostgreSQL
+        execute(
+            """
+            INSERT INTO users (user_id, name, email, password, role, school)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                get_next_user_id(),
+                name,
+                email,
+                hashed_password,
+                role,
+                school,
+            ),
+        )
+        messages.success(request, "Registration successful! Please log in.")
+        return redirect('login')
+
+    return render(request, 'register.html')
+
+def logout_view(request):
+    """Log out the user."""
+    if 'user_name' not in request.session:
+        messages.error(request, "You are not logged in.")
+        return redirect('login')
+    
+    try:
+        request.session.flush()  # Clear all session data
+        messages.success(request, "You have been logged out.")
+    except Exception as e:
+        messages.error(request, f"An error occurred during logout: {str(e)}")
+    
+    return redirect('login')
+def home(request):
+    """Render the home page with the question count."""
+    total_questions = query_one("SELECT COUNT(*) AS cnt FROM questions")['cnt']
+    return render(request, 'home.html', {'total_questions': total_questions})
+
+def login_view(request):
+    """Handle login using the users table."""
+    if request.method == 'POST':
+        email = request.POST['email']
+        password = request.POST['password']
+        user = query_one("SELECT * FROM users WHERE email = %s", (email,))
+        if user and check_password(password, user.get('password', '')):
+            request.session['user_name'] = user['name']
+            messages.success(request, f"Welcome back, {user['name']}!")
+            return redirect('home')
+        messages.error(request, "Invalid email or password.")
+        return redirect('login')
+
+    return render(request, 'login.html')
+def question_bank(request):
+    """Render the initial page with session codes."""
+    rows = query_all("SELECT DISTINCT session_code FROM questions")
+    session_codes = [r['session_code'] for r in rows]
+    return render(request, 'question_bank.html', {'session_codes': session_codes})
+
+def get_subtopics(request):
+    """Return subtopics for a given session code."""
+    session_code = request.GET.get('session_code')
+    if not session_code:
+        return JsonResponse({'error': 'Session code is required'}, status=400)
+
+    rows = query_all(
+        "SELECT DISTINCT subtopic FROM questions WHERE session_code = %s",
+        (session_code,),
+    )
+    subtopics = [r['subtopic'] for r in rows]
+    if not subtopics:
+        return JsonResponse({'error': 'No subtopics found for this session code'}, status=404)
+
+    return JsonResponse({'subtopics': list(subtopics)})
+
+import random
+
+def practice_questions(request):
+    """Render the practice questions page with questions in random order."""
+    session_code = request.GET.get('session_code')
+    subtopic = request.GET.get('subtopic')
+
+    if not session_code or not subtopic:
+        return render(request, 'error.html', {'message': 'Session code and subtopic are required'})
+
+    # Fetch questions from PostgreSQL matching the filters
+    docs = query_all(
+        "SELECT * FROM questions WHERE session_code = %s AND subtopic = %s",
+        (session_code, subtopic),
+    )
+    random.shuffle(docs)
+    # Convert dicts to simple objects for template compatibility
+    questions = [SimpleNamespace(**doc) for doc in docs]
+    return render(request, 'practice_questions.html', {'questions': questions})
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.admin.views.decorators import staff_member_required
+from datetime import datetime
+
+@csrf_exempt
+def check_answer(request):
+    question_id = request.POST.get('question_id')
+    selected_answer = request.POST.get('selected_answer')
+    doc = query_one("SELECT answer FROM questions WHERE question_id = %s", (question_id,))
+    is_correct = doc and doc.get('answer') == selected_answer
+    return JsonResponse({'is_correct': is_correct})
+
+
+@csrf_exempt
+@require_POST
+def update_activity(request):
+    """Update or record user activity for a question."""
+    if 'user_name' not in request.session:
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+
+    question_id = request.POST.get('question_id')
+    action = request.POST.get('action')
+    if not question_id or not action:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    user = query_one("SELECT * FROM users WHERE name = %s", (request.session['user_name'],))
+    if not user:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+    activity = get_or_create_activity(user['user_id'], question_id)
+    updates = {}
+
+    if action == 'start':
+        now = datetime.utcnow()
+        updates['time_started'] = now
+        execute(
+            "UPDATE user_activity SET time_started = %s, times_viewed = times_viewed + 1 WHERE user_id = %s AND question_id = %s",
+            (now, user['user_id'], question_id),
+        )
+    elif action == 'answer':
+        correct = request.POST.get('correct') == 'true'
+        time_took = None
+        if activity.get('time_started'):
+            time_took = datetime.utcnow() - activity['time_started']
+            updates['time_took'] = time_took
+        updates.update({'solved': True, 'correct': correct})
+        execute(
+            "UPDATE user_activity SET solved = %s, correct = %s, time_took = %s WHERE user_id = %s AND question_id = %s",
+            (True, correct, time_took, user['user_id'], question_id),
+        )
+    elif action == 'bookmark':
+        new_state = not activity.get('bookmarked', False)
+        updates['bookmarked'] = new_state
+        execute(
+            "UPDATE user_activity SET bookmarked = %s WHERE user_id = %s AND question_id = %s",
+            (new_state, user['user_id'], question_id),
+        )
+    elif action == 'star':
+        new_state = not activity.get('starred', False)
+        updates['starred'] = new_state
+        execute(
+            "UPDATE user_activity SET starred = %s WHERE user_id = %s AND question_id = %s",
+            (new_state, user['user_id'], question_id),
+        )
+    else:
+        return JsonResponse({'error': 'Invalid action'}, status=400)
+
+    return JsonResponse({'status': 'ok', **updates})
+
+
+@staff_member_required
+def user_activity_admin(request):
+    """Display user activity records with summary statistics for admins."""
+    records = [SimpleNamespace(**row) for row in query_all("SELECT * FROM user_activity")]
+
+    summary = {
+        "total_users": query_one("SELECT COUNT(*) AS cnt FROM users")['cnt'],
+        "total_questions": query_one("SELECT COUNT(*) AS cnt FROM questions")['cnt'],
+        "total_records": query_one("SELECT COUNT(*) AS cnt FROM user_activity")['cnt'],
+        "solved": query_one("SELECT COUNT(*) AS cnt FROM user_activity WHERE solved = TRUE")['cnt'],
+        "correct": query_one("SELECT COUNT(*) AS cnt FROM user_activity WHERE correct = TRUE")['cnt'],
+        "starred": query_one("SELECT COUNT(*) AS cnt FROM user_activity WHERE starred = TRUE")['cnt'],
+        "bookmarked": query_one("SELECT COUNT(*) AS cnt FROM user_activity WHERE bookmarked = TRUE")['cnt'],
+    }
+
+    context = {
+        "records": records,
+        "summary": summary,
+    }
+    return render(request, "user_activity_admin.html", context)
+

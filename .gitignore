@@ -1,0 +1,8 @@
+db.sqlite3
+dump.sql
+.idea
+bin
+lib
+include
+venv
+compelted.csv
