@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Reports</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+    <div class="container py-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="mb-0">Bug Reports</h3>
+            <a href="/report-bug/" class="btn btn-primary">New Report</a>
+        </div>
+        <div class="table-responsive card shadow-sm">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Reported</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bug in bugs %}
+                    <tr onclick="window.location='/staff/bugs/{{ bug.id }}/'" style="cursor:pointer;">
+                        <td class="text-muted">{{ bug.id }}</td>
+                        <td>
+                            <a href="/staff/bugs/{{ bug.id }}/" class="text-decoration-none">{{ bug.title }}</a>
+                        </td>
+                        <td><span class="badge severity-{{ bug.severity }}">{{ bug.severity|title }}</span></td>
+                        <td>{{ bug.status|title }}</td>
+                        <td>{{ bug.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">No bug reports yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

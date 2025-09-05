@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report a Bug</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+
+    <div class="container pb-5">
+        <div class="r19-page-intro text-center mb-4">
+            <h1 class="r19-title">Report a Bug</h1>
+            <p class="r19-subtitle">Describe the issue clearly. Attach a screenshot if helpful.</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} shadow-sm">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8 col-xl-7">
+                <div class="card r19-card-minimal shadow-sm">
+                    <div class="card-body p-4 p-md-5">
+                        <form method="post" enctype="multipart/form-data" id="bug-form" class="row g-4">
+                            {% csrf_token %}
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Title</label>
+                                <input type="text" class="form-control form-control-lg" name="title" placeholder="Short, clear summary" maxlength="120" required>
+                                <div class="form-text">Keep it under 120 characters.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="form-label fw-semibold mb-1">Description</label>
+                                    <small class="text-muted" id="desc-counter">0 / 800</small>
+                                </div>
+                                <textarea class="form-control" name="description" id="description" rows="6" maxlength="800" placeholder="What happened? What did you expect? Include error messages if any." required></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Steps to Reproduce</label>
+                                <textarea class="form-control" name="steps" rows="4" placeholder="1) Go to ...  2) Click ...  3) See error ..."></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold d-block mb-2">Severity</label>
+                                <div class="r19-severity d-flex gap-2 flex-wrap">
+                                    <input type="radio" class="btn-check" name="severity" id="sev-low" value="low">
+                                    <label class="btn r19-pill r19-pill-outline sev-low" for="sev-low">Low</label>
+
+                                    <input type="radio" class="btn-check" name="severity" id="sev-medium" value="medium" checked>
+                                    <label class="btn r19-pill r19-pill-outline sev-medium" for="sev-medium">Medium</label>
+
+                                    <input type="radio" class="btn-check" name="severity" id="sev-high" value="high">
+                                    <label class="btn r19-pill r19-pill-outline sev-high" for="sev-high">High</label>
+
+                                    <input type="radio" class="btn-check" name="severity" id="sev-critical" value="critical">
+                                    <label class="btn r19-pill r19-pill-outline sev-critical" for="sev-critical">Critical</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Contact Email (optional)</label>
+                                <input type="email" class="form-control" name="contact_email" placeholder="you@example.com">
+                                <div class="form-text">We’ll use this only to follow up.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold d-block mb-2">Screenshot (optional)</label>
+                                <div class="r19-dropzone" id="r19-dropzone">
+                                    <input type="file" name="screenshot" id="screenshot" accept="image/*" class="d-none">
+                                    <div class="dz-inset text-center">
+                                        <div class="small text-muted">Drag & drop an image here or</div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="pick-file">Choose file</button>
+                                        <div class="preview mt-3 d-none" id="dz-preview">
+                                            <img src="" alt="Preview" class="img-fluid rounded shadow-sm" id="dz-image" style="max-height: 220px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-dark btn-lg px-4">Submit Report</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/enhancements.js' %}"></script>
+    <script>window.__R19_ENH&&window.__R19_ENH();</script>
+    </body>
+    </html>

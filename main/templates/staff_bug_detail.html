@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug #{{ bug.id }} – {{ bug.title }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h3 class="mb-0">Bug #{{ bug.id }}</h3>
+      <a class="btn btn-outline-secondary" href="/staff/bugs/">Back</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+          <h4 class="mb-0">{{ bug.title }}</h4>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge severity-{{ bug.severity }}">{{ bug.severity|title }}</span>
+            <span class="badge bg-dark">{{ bug.status|title }}</span>
+          </div>
+        </div>
+        {% if bug.contact_email %}
+        <div class="text-muted small mb-3">Reporter contact: {{ bug.contact_email }}</div>
+        {% endif %}
+
+        <div class="row g-4">
+          <div class="col-md-7">
+            <h6 class="fw-bold">Description</h6>
+            <p class="mb-3" style="white-space: pre-wrap;">{{ bug.description }}</p>
+
+            {% if bug.steps_to_reproduce %}
+              <h6 class="fw-bold">Steps to Reproduce</h6>
+              <pre class="mb-0" style="white-space: pre-wrap; background:#f8fafc; border:1px solid #eef0f3; padding:12px; border-radius:8px;">{{ bug.steps_to_reproduce }}</pre>
+            {% endif %}
+          </div>
+
+          <div class="col-md-5">
+            <h6 class="fw-bold">Screenshot</h6>
+            {% if bug.screenshot %}
+              <img src="{{ bug.screenshot.url }}" class="img-fluid rounded border" alt="Screenshot" />
+            {% else %}
+              <div class="text-muted">No screenshot provided.</div>
+            {% endif %}
+
+            <div class="mt-3 small text-muted">
+              <div>Reported: {{ bug.created_at|date:"Y-m-d H:i" }}</div>
+              <div>Updated: {{ bug.updated_at|date:"Y-m-d H:i" }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
