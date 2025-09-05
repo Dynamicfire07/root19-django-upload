@@ -20,10 +20,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-change-this-to-a-unique-key'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["app.root19.com", "34.47.191.68", "127.0.0.1", "localhost"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://app.root19.com",
+    "https://app.root19.com"
+]
 
 # Application definition
 
@@ -137,10 +141,16 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = '/static/'
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# --- Deployment: static & media ---
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "static"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# (already set elsewhere—keep as you have)
+
