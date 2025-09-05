@@ -1,3 +1,4 @@
+{% load static %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
         <a class="navbar-brand" href="/">Quiz App</a>
@@ -12,9 +13,15 @@
                 <li class="nav-item">
                     <a class="nav-link" href="/question-bank/">Question Bank</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/report-bug/">Report Bug</a>
+                </li>
                 {% if request.user.is_staff %}
                 <li class="nav-item">
                     <a class="nav-link" href="/admin/user-activity/">Activity</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/bugs/">Bugs</a>
                 </li>
                 {% endif %}
             </ul>

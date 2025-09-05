@@ -135,6 +135,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from datetime import datetime
+from .models import BugReport
 
 @csrf_exempt
 def check_answer(request):
@@ -223,3 +224,47 @@ def user_activity_admin(request):
     }
     return render(request, "user_activity_admin.html", context)
 
+
+def report_bug(request):
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        description = request.POST.get("description", "").strip()
+        steps = request.POST.get("steps", "").strip()
+        severity = request.POST.get("severity", "medium")
+        contact_email = request.POST.get("contact_email", "").strip()
+        screenshot = request.FILES.get("screenshot")
+
+        if not title or not description:
+            messages.error(request, "Title and description are required.")
+            return render(request, "report_bug.html")
+
+        BugReport.objects.create(
+            title=title,
+            description=description,
+            steps_to_reproduce=steps,
+            severity=severity,
+            contact_email=contact_email,
+            screenshot=screenshot,
+        )
+        return redirect("report_bug_thanks")
+
+    return render(request, "report_bug.html")
+
+
+def report_bug_thanks(request):
+    return render(request, "bug_thanks.html")
+
+
+@staff_member_required
+def staff_bug_list(request):
+    bugs = BugReport.objects.order_by("-created_at")
+    return render(request, "staff_bug_list.html", {"bugs": bugs})
+
+
+@staff_member_required
+def staff_bug_detail(request, bug_id: int):
+    bug = BugReport.objects.filter(id=bug_id).first()
+    if not bug:
+        messages.error(request, "Bug not found")
+        return redirect("staff_bug_list")
+    return render(request, "main/staff_bug_detail.html", {"bug": bug})

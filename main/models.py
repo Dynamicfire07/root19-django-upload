@@ -44,3 +44,28 @@ class UserActivity(models.Model):
 
     class Meta:
         db_table = "user_activity"
+
+
+class BugReport(models.Model):
+    SEVERITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("critical", "Critical"),
+    ]
+
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    steps_to_reproduce = models.TextField(blank=True)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default="medium")
+    contact_email = models.EmailField(blank=True)
+    screenshot = models.ImageField(upload_to="bug_screenshots/", blank=True, null=True)
+    status = models.CharField(max_length=20, default="open")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "bug_reports"
+
+    def __str__(self):
+        return f"[{self.severity.upper()}] {self.title}"
