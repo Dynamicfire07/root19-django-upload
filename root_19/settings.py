@@ -12,6 +12,17 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "HOST": "aws-1-ap-south-1.pooler.supabase.com",
+        "PORT": "6543",
+        "NAME": "postgres",
+        "USER": "postgres.vzmbwobdlddxzgqfhnsh",
+        "PASSWORD": "shaishavroot19",
+        "OPTIONS": {"sslmode": "require"},
+    }
+}
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
