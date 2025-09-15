@@ -1,0 +1,61 @@
+/* Global styles for Root19 app */
+:root {
+  --primary: #0d6efd;
+  --primary-dark: #0b5ed7;
+  --bg: #f7f7f8;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --ring: rgba(13,110,253,.25);
+  --border: #e6e7eb;
+}
+
+body { background-color: var(--bg); color: var(--text); }
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+.navbar.bg-primary { background: #111827 !important; }
+
+.card { border: 1px solid var(--border); border-radius: 12px; }
+.card-header { border-bottom: 1px solid var(--border); }
+
+.badge.severity-low { background-color: #6c757d; }
+.badge.severity-medium { background-color: #0d6efd; }
+.badge.severity-high { background-color: #fd7e14; }
+.badge.severity-critical { background-color: #dc3545; }
+
+/* Subtle hover lift */
+.card, .table { transition: transform .12s ease, box-shadow .12s ease; }
+.card:hover { transform: translateY(-1px); box-shadow: 0 0.6rem 1.2rem rgba(0,0,0,.08); }
+
+/* Form tweaks */
+.form-control, .form-select { border-radius: .6rem; }
+.btn { border-radius: .6rem; }
+
+/* Hero + glass */
+.r19-card-minimal { background: #fff; border-radius: 12px; }
+
+/* Severity pills */
+.r19-pill { border-radius: 999px; padding: .4rem .9rem; border: 1px solid var(--border); background: #fff; color: var(--text); }
+.r19-pill.r19-pill-outline.sev-low { border-color: #d1d5db; }
+.r19-pill.r19-pill-outline.sev-medium { border-color: #bcd0ff; color: #1d4ed8; }
+.r19-pill.r19-pill-outline.sev-high { border-color: #ffd7b0; color: #b45309; }
+.r19-pill.r19-pill-outline.sev-critical { border-color: #ffc0c7; color: #b91c1c; }
+.btn-check:checked + .r19-pill { box-shadow: 0 0 0 3px var(--ring); border-color: transparent; }
+
+/* Dropzone */
+.r19-dropzone { position: relative; border: 1.5px dashed var(--border); border-radius: 12px; padding: 1.25rem; background: #fff; transition: border-color .15s ease, background .15s ease; }
+.r19-dropzone.dragover { border-color: var(--primary); background: rgba(13,110,253,.05); }
+.r19-dropzone .dz-inset { pointer-events: none; }
+.r19-dropzone #pick-file { pointer-events: all; }
+
+/* Helpful list */
+.r19-title { font-size: clamp(1.4rem, 1.2rem + 1vw, 2rem); font-weight: 700; margin: 1rem 0 .25rem; }
+.r19-subtitle { color: var(--muted); margin: 0 0 1rem; }
+.r19-page-intro { margin-top: 1.25rem; }
+
+/* Inputs */
+.form-control, .form-select { border-radius: 10px; border: 1px solid var(--border); }
+.form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px var(--ring); border-color: #bcd0ff; }
+.btn { border-radius: 10px; }
