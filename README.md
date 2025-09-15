@@ -1,4 +1,4 @@
-# Quiz App
+# ROOT 19
 
 A web-based quiz application built with Django that allows users to register, log in, practice questions, and track progress. This project features a dynamic and user-friendly interface, including a hero section, session-based authentication, and animated feedback.
 

@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About • ROOT 19</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero {
+            background: linear-gradient(135deg, #0d6efd 0%, #1e90ff 100%);
+            color: #fff;
+            border-radius: .75rem;
+        }
+        .creator-card {
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .creator-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,.1);
+        }
+        .avatar {
+            width: 128px; height: 128px;
+            border-radius: 50%; object-fit: cover;
+            background: #f1f3f5;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #6c757d; font-weight: 600; font-size: 1.25rem;
+            border: 3px solid #e9ecef;
+        }
+        .site-meta {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: .75rem;
+        }
+    </style>
+    {% include 'navbar.html' %}
+    <div class="container my-4">
+        <div class="p-4 p-md-5 hero mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-semibold mb-2">About This Project</h1>
+                    <p class="mb-0 lead">A quick introduction to the people behind ROOT 19 and the mission that guides our work.</p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="/question-bank/" class="btn btn-light btn-lg text-primary">Explore Questions</a>
+                </div>
+            </div>
+        </div>
+
+        <section class="mb-5">
+            <h2 class="h4 mb-3">Our Creators</h2>
+            <div class="row g-4">
+                <!-- Creator 1 Placeholder -->
+                <div class="col-md-6">
+                    <div class="card creator-card h-100">
+                        <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                            <div class="avatar mb-3">
+                                IMG 1
+                            </div>
+                            <h3 class="h5 mb-1">Creator Name One</h3>
+                            <p class="text-muted mb-2">Role / Title</p>
+                            <p class="mb-0">Short professional bio goes here. Use this space to add a concise description, interests, and key contributions to the project.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Creator 2 Placeholder -->
+                <div class="col-md-6">
+                    <div class="card creator-card h-100">
+                        <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                            <div class="avatar mb-3">
+                                IMG 2
+                            </div>
+                            <h3 class="h5 mb-1">Creator Name Two</h3>
+                            <p class="text-muted mb-2">Role / Title</p>
+                            <p class="mb-0">Short professional bio goes here. Use this space to add a concise description, interests, and key contributions to the project.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5 site-meta p-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-md-8">
+                    <h2 class="h5 mb-2">Our Mission</h2>
+                    <p class="mb-0">We aim to make practice fast, focused, and accessible. ROOT 19 brings curated questions with progress tracking to help learners build confidence and mastery over time.</p>
+                </div>
+                <div class="col-md-4">
+                    <ul class="list-unstyled mb-0 small">
+                        <li><strong>Version:</strong> 1.0</li>
+                        <li><strong>Tech:</strong> Django, Bootstrap</li>
+                        <li><strong>Contact:</strong> <a href="/report-bug/">Report an issue</a></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        {% include 'footer.html' %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+</html>

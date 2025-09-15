@@ -171,6 +171,11 @@ def practice_questions(request):
     })
 
 
+def about(request):
+    """Simple About page for creators and site info."""
+    return render(request, 'about.html')
+
+
 # -------------------------
 # API ENDPOINTS
 # -------------------------
@@ -327,3 +332,19 @@ def staff_bug_detail(request, bug_id: int):
         messages.error(request, "Bug not found")
         return redirect("staff_bug_list")
     return render(request, "main/staff_bug_detail.html", {"bug": bug})
+
+
+# -------------------------
+# LEGAL PAGES
+# -------------------------
+
+def terms(request):
+    return render(request, "terms.html")
+
+
+def privacy(request):
+    return render(request, "privacy.html")
+
+
+def disclaimer(request):
+    return render(request, "disclaimer.html")

@@ -1,7 +1,7 @@
 {% load static %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <a class="navbar-brand" href="/">Quiz App</a>
+        <a class="navbar-brand" href="/">ROOT 19</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -14,7 +14,20 @@
                     <a class="nav-link" href="/question-bank/">Question Bank</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="/about/">About</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="/report-bug/">Report Bug</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="legalDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Legal
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="legalDropdown">
+                        <li><a class="dropdown-item" href="/terms/">Terms of Service</a></li>
+                        <li><a class="dropdown-item" href="/privacy/">Privacy Policy</a></li>
+                        <li><a class="dropdown-item" href="/disclaimer/">Disclaimer</a></li>
+                    </ul>
                 </li>
                 {% if request.user.is_staff %}
                 <li class="nav-item">
