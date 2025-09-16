@@ -331,7 +331,8 @@ def staff_bug_detail(request, bug_id: int):
     if not bug:
         messages.error(request, "Bug not found")
         return redirect("staff_bug_list")
-    return render(request, "main/staff_bug_detail.html", {"bug": bug})
+    # Use app templates loader (APP_DIRS) — template lives at main/templates/staff_bug_detail.html
+    return render(request, "staff_bug_detail.html", {"bug": bug})
 
 
 # -------------------------
