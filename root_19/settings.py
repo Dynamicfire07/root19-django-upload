@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-change-this-to-a-unique-key'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["app.root19.com", "34.47.191.68", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["app.root19.com", "34.180.32.10", "127.0.0.1", "localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://app.root19.com",
@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'main.middleware.StaticMediaCacheMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'root_19.urls'
@@ -161,8 +162,13 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # --- Deployment: static & media ---
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "static"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'main' / 'static',
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -172,3 +178,4 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Sessions: keep users signed in longer by default
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
 SESSION_SAVE_EVERY_REQUEST = True  # refresh expiry on activity
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
