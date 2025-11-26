@@ -10,39 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0d6efd;
-            --primary-dark: #0b5ed7;
-            --muted: #6b7280;
-            --border: #e5e7eb;
-        }
-        body.auth-body {
-            min-height: 100vh;
-            background: radial-gradient(120% 120% at 20% 20%, rgba(13,110,253,.12), transparent), #f7f8fb;
-            font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-            color: #0f172a;
-            display: flex;
-            flex-direction: column;
-        }
-        .auth-shell { flex: 1; display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; }
-        .auth-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 1.5rem 3rem rgba(0,0,0,.08); overflow: hidden; max-width: 960px; width: 100%; }
-        .auth-hero { background: linear-gradient(135deg, #0f172a, #0b5ed7); color: #fff; padding: 2.5rem; position: relative; }
-        .auth-hero .badge { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; letter-spacing: .05em; }
-        .auth-hero h1 { font-weight: 800; margin: 1rem 0 .5rem; }
-        .auth-hero p { color: rgba(255,255,255,.82); margin-bottom: 1.5rem; }
-        .auth-hero .pill { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .9rem; border-radius: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); font-weight: 600; }
-        .auth-form { padding: 2.5rem; }
-        .auth-form h2 { font-weight: 800; margin-bottom: .5rem; }
-        .auth-form .lead { color: var(--muted); margin-bottom: 1.5rem; }
-        .auth-form .form-control { border-radius: 12px; border: 1px solid var(--border); padding: .85rem 1rem; }
-        .auth-form .form-control:focus { box-shadow: 0 0 0 4px rgba(13,110,253,.18); border-color: rgba(13,110,253,.6); }
-        .auth-form .btn-primary { border-radius: 12px; padding: .9rem 1rem; font-weight: 700; }
-        .meta-links { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
-        .muted-link { color: var(--muted); text-decoration: none; }
-        .muted-link:hover { color: #0d6efd; }
-        .messages { margin-bottom: 1rem; }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body class="auth-body">
     {% include 'navbar.html' %}
