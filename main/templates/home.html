@@ -14,8 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- App CSS (put AFTER Bootstrap so it overrides Bootstrap) -->
-    <link rel="stylesheet" href="{% static 'css/app.css' %}?v=5">
+    {% include '_app_styles.html' %}
 </head>
 <body class="home-page">
     {% include 'navbar.html' %}

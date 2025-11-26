@@ -10,13 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/app.css' %}">
-    <style>
-        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f7f8fb; }
-        .bug-hero { background: linear-gradient(135deg, #0f172a, #0b5ed7); color: #fff; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1rem 2rem rgba(0,0,0,.12); }
-        .bug-hero .pill { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .85rem; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; font-weight: 600; }
-        .bug-card { border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); }
-    </style>
+    {% include '_app_styles.html' %}
 </head>
 <body>
     {% include 'navbar.html' %}
