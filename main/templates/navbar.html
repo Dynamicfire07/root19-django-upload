@@ -37,6 +37,14 @@
                     <a class="nav-link" href="/staff/bugs/">Bugs</a>
                 </li>
                 {% endif %}
+                {% if request.session.user_id %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/user-stats/">My Stats</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saved/">Saved</a>
+                </li>
+                {% endif %}
             </ul>
             <ul class="navbar-nav ms-auto">
                 {% if request.session.user_name %}

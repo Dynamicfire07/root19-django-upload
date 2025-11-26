@@ -4,36 +4,65 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from django.conf import settings
 
-# Establish a global connection to the Supabase (PostgreSQL) database. The
-# credentials are currently hard-coded in ``settings.py``.
-conn = psycopg2.connect(
-    host="aws-1-ap-south-1.pooler.supabase.com",
-    port=6543,
-    dbname="postgres",
-    user="postgres.vzmbwobdlddxzgqfhnsh",
-    password="shaishavroot19",
-    sslmode="require"
-)
-conn.autocommit = True
+# Lazily open a single connection so the app can start even if the DB is down.
+_conn = None
+_logged_reuse = False
+_verbose_db_logs = bool(int(os.getenv("DB_VERBOSE", "0"))) if "os" in globals() else False
+
+
+def get_conn():
+    """Return a cached psycopg2 connection using Django settings."""
+    global _conn
+    global _logged_reuse
+    if _conn and not _conn.closed:
+        if _verbose_db_logs and not _logged_reuse:
+            print("[db] Reusing existing DB connection")
+            _logged_reuse = True
+        return _conn
+
+    cfg = settings.DATABASES["default"]
+    timeout = getattr(settings, "DB_CONNECT_TIMEOUT", 5)
+    host = cfg.get("HOST")
+    user = cfg.get("USER")
+    dbname = cfg.get("NAME")
+    if _verbose_db_logs:
+        print(f"[db] Opening DB connection to host={host} db={dbname} user={user} ssl={cfg.get('OPTIONS', {}).get('sslmode')}")
+    try:
+        _conn = psycopg2.connect(
+            host=host,
+            port=cfg.get("PORT"),
+            dbname=dbname,
+            user=user,
+            password=cfg.get("PASSWORD"),
+            sslmode=cfg.get("OPTIONS", {}).get("sslmode", "prefer"),
+            connect_timeout=timeout,
+        )
+        _conn.autocommit = True
+        if _verbose_db_logs:
+            print("[db] Connection established.")
+    except Exception as exc:
+        print(f"[db] Connection failed: {exc}")
+        raise
+    return _conn
 
 
 def query_all(sql: str, params: tuple = ()):
     """Return all rows for a query as a list of dictionaries."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with get_conn().cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(sql, params)
         return cur.fetchall()
 
 
 def query_one(sql: str, params: tuple = ()):
     """Return a single row for a query as a dictionary."""
-    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with get_conn().cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(sql, params)
         return cur.fetchone()
 
 
 def execute(sql: str, params: tuple = ()):
     """Execute a statement that does not return rows."""
-    with conn.cursor() as cur:
+    with get_conn().cursor() as cur:
         cur.execute(sql, params)
 
 
@@ -71,4 +100,3 @@ def get_next_user_id() -> str:
         except (ValueError, TypeError):
             pass
     return "U1"
-

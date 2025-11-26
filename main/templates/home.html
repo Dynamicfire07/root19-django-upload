@@ -7,84 +7,261 @@
     <title>Home</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
-    <!-- Custom CSS -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        .hero {
-            background: linear-gradient(to right, #007bff, #0056b3);
-            color: white;
-            text-align: center;
-            padding: 100px 20px;
-            animation: fadeIn 2s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .hero h1 {
-            font-size: 4rem;
-            font-weight: bold;
-        }
-
-        .hero p {
-            font-size: 1.5rem;
-        }
-
-        .stats {
-            text-align: center;
-            padding: 50px 20px;
-        }
-
-        .stats h2 {
-            font-size: 3rem;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 10px;
-        }
-
-        .stats p {
-            font-size: 1.2rem;
-            color: #555;
-        }
-    </style>
 </head>
-<body>
+<body class="home-page">
     {% include 'navbar.html' %}
 
-    <!-- Hero Section -->
-    <div class="hero">
-        <h1>Welcome to ROOT 19</h1>
-        <p>Practice questions, track your progress, and achieve your goals!</p>
-    </div>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-neo position-relative overflow-hidden">
+            <div class="hero-ambient hero-ambient-primary"></div>
+            <div class="hero-ambient hero-ambient-accent"></div>
+            <div class="hero-grid"></div>
 
-    <!-- Stats Section -->
-    <div class="stats">
-        <h2 id="question-count">0</h2>
-        <p>Total Questions in the Database</p>
-    </div>
+            <div class="container position-relative">
+                <div class="row align-items-center justify-content-between gy-5">
+                    <div class="col-lg-6">
+                        <div class="hero-pill text-uppercase fw-semibold">Root 19 / Prep Platform</div>
+                        <h1 class="display-4 fw-bold hero-title mt-3">Practice smarter. Stay exam-ready.</h1>
+                        <p class="hero-lede mt-3 mb-4">
+                            Work through curated questions, see progress in real time, and keep momentum with a clean, focused workspace.
+                        </p>
+                        <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
+                            <a class="btn btn-light btn-lg shadow-sm" href="/question-bank/">Explore question bank</a>
+                            <a class="btn btn-outline-light btn-lg" href="/register/">Create your account</a>
+                            <div class="d-flex align-items-center gap-2 hero-meta">
+                                <span class="pulse-dot"></span>
+                                <small class="text-white-50">Live updates every day</small>
+                            </div>
+                        </div>
+                        <div class="hero-badges d-flex flex-wrap gap-3 mt-4">
+                            <div class="badge-ghost">Timed practice</div>
+                            <div class="badge-ghost">Detailed solutions</div>
+                            <div class="badge-ghost">Performance analytics</div>
+                            <div class="badge-ghost">Smart filters</div>
+                            <div class="badge-ghost">Question history</div>
+                        </div>
+                        <div class="hero-feature-stack mt-4">
+                            <div class="hero-feature">
+                                <div class="feature-dot"></div>
+                                <div>
+                                    <div class="feature-label">Stay in flow</div>
+                                    <div class="feature-desc">Toggle between timed drills and walkthrough mode in one click.</div>
+                                </div>
+                            </div>
+                            <div class="hero-feature">
+                                <div class="feature-dot alt"></div>
+                                <div>
+                                    <div class="feature-label">Never lose progress</div>
+                                    <div class="feature-desc">Your streaks, accuracy, and attempts sync when you log in.</div>
+                                </div>
+                            </div>
+                            <div class="hero-feature">
+                                <div class="feature-dot"></div>
+                                <div>
+                                    <div class="feature-label">Know what to fix</div>
+                                    <div class="feature-desc">Surface weak topics instantly with heatmapped stats.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="hero-panel shadow-lg" data-tilt>
+                            <div class="panel-header d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-white-50 small">Today</div>
+                                    <div class="fw-semibold text-white">Your practice snapshot</div>
+                                </div>
+                                <div class="chip chip-live">
+                                    <span class="chip-dot"></span>
+                                    Tracking
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="panel-row">
+                                    <div>
+                                        <div class="small text-white-50">Questions live</div>
+                                        <div class="display-6 fw-bold text-white mb-0" id="question-count">0</div>
+                                    </div>
+                                    <div class="mini-graph gradient-primary"></div>
+                                </div>
+                                <div class="panel-row mt-4">
+                                    <div class="progress-block">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="text-white">Accuracy</span>
+                                            <span class="text-white-50">80%</span>
+                                        </div>
+                                        <div class="progress slim-progress">
+                                            <div class="progress-bar bg-light" role="progressbar" style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="progress-block">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="text-white">Streak</span>
+                                            <span class="text-white-50">7 days</span>
+                                        </div>
+                                        <div class="progress slim-progress">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: 70%;" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="panel-footer">
+                                    <div class="d-flex align-items-center gap-2 text-white">
+                                        <span class="icon-dot"></span>
+                                        Stay on pace with guided sets built for your exam date.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats + Features -->
+        <section class="surface-section">
+            <div class="container">
+                <div class="row g-4 align-items-center">
+                    <div class="col-lg-4">
+                        <div class="stat-card">
+                            <div class="stat-kicker">Database</div>
+                            <div class="stat-value" id="question-count-secondary">0</div>
+                            <div class="stat-label">Total questions live and growing</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <span class="icon-circle"></span>
+                                    </div>
+                                    <div class="feature-title">Adaptive sets</div>
+                                    <div class="feature-copy">Mix timed drills and walkthroughs tailored to your pace.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <span class="icon-tri"></span>
+                                    </div>
+                                    <div class="feature-title">Clean focus</div>
+                                    <div class="feature-copy">A distraction-free workspace with quick filters and search.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <span class="icon-wave"></span>
+                                    </div>
+                                    <div class="feature-title">Progress clarity</div>
+                                    <div class="feature-copy">Track streaks, accuracy, and readiness at a glance.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 align-items-center mt-4">
+                    <div class="col-lg-5">
+                        <div class="stat-card cta-card text-white">
+                            <div class="stat-kicker text-uppercase text-white-50">Get more when logged in</div>
+                            <div class="stat-value text-white">Keep your streak alive.</div>
+                            <p class="mb-4 text-white-75">Log in to sync attempts, track accuracy over time, and unlock guided sets tailored to you.</p>
+                            <div class="d-flex gap-3">
+                                <a class="btn btn-light btn-lg shadow-sm" href="/login/">Log in</a>
+                                <a class="btn btn-outline-light btn-lg" href="/register/">Create account</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="feature-spotlight">
+                            <div class="spotlight-tabs">
+                                <button class="spotlight-tab active" data-target="timed">Timed mode</button>
+                                <button class="spotlight-tab" data-target="review">Review mode</button>
+                                <button class="spotlight-tab" data-target="filters">Filters</button>
+                                <button class="spotlight-tab" data-target="analytics">Analytics</button>
+                            </div>
+                            <div class="spotlight-panels">
+                                <div class="spotlight-panel active" data-panel="timed">
+                                    <div class="spotlight-title">Timed sessions that feel smooth</div>
+                                    <p class="spotlight-copy">Start a sprint with pacing hints, pause with grace, and jump back in exactly where you left off.</p>
+                                </div>
+                                <div class="spotlight-panel" data-panel="review">
+                                    <div class="spotlight-title">See the “why” behind every answer</div>
+                                    <p class="spotlight-copy">Detailed explanations, worked steps, and peer notes to lock in concepts quickly.</p>
+                                </div>
+                                <div class="spotlight-panel" data-panel="filters">
+                                    <div class="spotlight-title">Search that finds what matters</div>
+                                    <p class="spotlight-copy">Use tags, difficulty, and recency filters to build the exact set you need in seconds.</p>
+                                </div>
+                                <div class="spotlight-panel" data-panel="analytics">
+                                    <div class="spotlight-title">Clarity on progress</div>
+                                    <p class="spotlight-copy">Heatmaps, streaks, and readiness signals guide what to study next.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
    
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Animate the question count
-        const questionCount = {{total_questions }};
-        const countElement = document.getElementById('question-count');
-        let count = 0;
-        const interval = setInterval(() => {
-            if (count < questionCount) {
-                count += 1; // Increment the count
-                countElement.innerText = count; // Update the element
-            } else {
-                clearInterval(interval); // Stop the interval when done
-            }
-        }, 0.1); // Adjust speed for animation // Adjust speed
+        const questionCount = {{ total_questions }};
+
+        // Ease-out counter animation for hero and secondary stat
+        const animateCount = (el, target) => {
+            const duration = 900;
+            const start = performance.now();
+            const step = (now) => {
+                const progress = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.floor(eased * target).toLocaleString();
+                if (progress < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        };
+
+        const primaryCountEl = document.getElementById('question-count');
+        const secondaryCountEl = document.getElementById('question-count-secondary');
+        if (primaryCountEl && secondaryCountEl) {
+            animateCount(primaryCountEl, questionCount);
+            animateCount(secondaryCountEl, questionCount);
+        }
+
+        // Subtle tilt on the hero panel for interactive depth
+        const tiltCard = document.querySelector('[data-tilt]');
+        if (tiltCard) {
+            tiltCard.addEventListener('pointermove', (event) => {
+                const rect = tiltCard.getBoundingClientRect();
+                const x = event.clientX - rect.left - rect.width / 2;
+                const y = event.clientY - rect.top - rect.height / 2;
+                tiltCard.style.transform = `perspective(1000px) rotateY(${x / 30}deg) rotateX(${ -y / 30}deg) translateY(-4px)`;
+            });
+            tiltCard.addEventListener('pointerleave', () => {
+                tiltCard.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) translateY(0)';
+            });
+        }
+
+        // Spotlight tabs for feature storytelling
+        const tabs = document.querySelectorAll('.spotlight-tab');
+        const panels = document.querySelectorAll('.spotlight-panel');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.getAttribute('data-target');
+                tabs.forEach(t => t.classList.toggle('active', t === tab));
+                panels.forEach(panel => panel.classList.toggle('active', panel.getAttribute('data-panel') === target));
+            });
+        });
     </script>
     {% include 'footer.html' %}
 </body>

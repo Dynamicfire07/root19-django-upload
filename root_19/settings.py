@@ -114,6 +114,8 @@ DATABASES = {
         },
     }
 }
+# Seconds to wait when opening the DB connection (used by main/db.py).
+DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
 DATABASE_URL="postgresql://postgres:shaishavroot19@db.vzmbwobdlddxzgqfhnsh.supabase.co:5432/postgres"
 
 # Password validation
@@ -165,3 +167,6 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # (already set elsewhere—keep as you have)
 
+# Sessions: keep users signed in longer by default
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
+SESSION_SAVE_EVERY_REQUEST = True  # refresh expiry on activity

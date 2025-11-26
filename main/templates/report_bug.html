@@ -6,15 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report a Bug</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <style>
+        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f7f8fb; }
+        .bug-hero { background: linear-gradient(135deg, #0f172a, #0b5ed7); color: #fff; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1rem 2rem rgba(0,0,0,.12); }
+        .bug-hero .pill { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .85rem; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; font-weight: 600; }
+        .bug-card { border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); }
+    </style>
 </head>
 <body>
     {% include 'navbar.html' %}
 
     <div class="container pb-5">
-        <div class="r19-page-intro text-center mb-4">
-            <h1 class="r19-title">Report a Bug</h1>
-            <p class="r19-subtitle">Describe the issue clearly. Attach a screenshot if helpful.</p>
+        <div class="bug-hero">
+            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center">
+                <div>
+                    <div class="text-uppercase small text-white-50 fw-semibold">Root 19</div>
+                    <h1 class="mb-1 fw-bold">Report a Bug</h1>
+                    <p class="mb-0 text-white-75">Describe the issue, attach a screenshot if helpful, and we’ll jump on it.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="pill"><i class="bi bi-flag-fill"></i> Clear description</span>
+                    <span class="pill"><i class="bi bi-card-image"></i> Screenshot ready</span>
+                    <span class="pill"><i class="bi bi-lightning-charge-fill"></i> Fast triage</span>
+                </div>
+            </div>
         </div>
 
         {% if messages %}
@@ -25,7 +45,7 @@
 
         <div class="row justify-content-center">
             <div class="col-12 col-lg-8 col-xl-7">
-                <div class="card r19-card-minimal shadow-sm">
+                <div class="card r19-card-minimal shadow-sm bug-card">
                     <div class="card-body p-4 p-md-5">
                         <form method="post" enctype="multipart/form-data" id="bug-form" class="row g-4">
                             {% csrf_token %}

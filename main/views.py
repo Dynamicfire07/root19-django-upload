@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import random
 import json
@@ -73,12 +73,19 @@ def login_view(request):
     if request.method == 'POST':
         email = request.POST['email']
         password = request.POST['password']
+        remember_me = request.POST.get('remember_me') == 'on'
 
         user = query_one("SELECT * FROM users WHERE email = %s", (email,))
         if user and check_password(password, user.get('password', '')):
             # ✅ Store both user_id and user_name in session
             request.session['user_id'] = user['user_id']
             request.session['user_name'] = user['name']
+            if remember_me:
+                # 30-day rolling session
+                request.session.set_expiry(60 * 60 * 24 * 30)
+            else:
+                # Expire when browser closes
+                request.session.set_expiry(0)
 
             messages.success(request, f"Welcome back, {user['name']}!")
             return redirect('home')
@@ -136,11 +143,6 @@ def get_subtopics(request):
 
     return JsonResponse({'subtopics': list(subtopics)})
 
-
-import random
-from types import SimpleNamespace
-from django.shortcuts import render
-
 def practice_questions(request):
     """Render the practice questions page with questions in random order."""
     session_code = request.GET.get('session_code')
@@ -168,7 +170,195 @@ def practice_questions(request):
     return render(request, 'practice_questions.html', {
         'questions': questions,
         'user_id': user_id,
+        'limit': None if user_id else 2,
     })
+
+
+def user_stats(request):
+    """Personal stats dashboard plus global leaderboard."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        messages.info(request, "Please log in to view your stats.")
+        return redirect("login")
+
+    user = query_one(
+        "SELECT user_id, name, email, role, school FROM users WHERE user_id = %s",
+        (user_id,),
+    ) or {}
+
+    totals = query_one(
+        "SELECT COUNT(*) AS attempts FROM user_activity WHERE user_id = %s",
+        (user_id,),
+    ) or {"attempts": 0}
+    solved = query_one(
+        "SELECT COUNT(*) AS solved FROM user_activity WHERE user_id = %s AND solved = TRUE",
+        (user_id,),
+    ) or {"solved": 0}
+    correct = query_one(
+        "SELECT COUNT(*) AS correct FROM user_activity WHERE user_id = %s AND correct = TRUE",
+        (user_id,),
+    ) or {"correct": 0}
+    bookmarked = query_one(
+        "SELECT COUNT(*) AS bookmarked FROM user_activity WHERE user_id = %s AND bookmarked = TRUE",
+        (user_id,),
+    ) or {"bookmarked": 0}
+    starred = query_one(
+        "SELECT COUNT(*) AS starred FROM user_activity WHERE user_id = %s AND starred = TRUE",
+        (user_id,),
+    ) or {"starred": 0}
+    avg_time_row = query_one(
+        "SELECT AVG(time_took) AS avg_time FROM user_activity WHERE user_id = %s AND time_took IS NOT NULL",
+        (user_id,),
+    ) or {"avg_time": None}
+
+    attempts = totals.get("attempts", 0) or 0
+    solved_count = solved.get("solved", 0) or 0
+    correct_count = correct.get("correct", 0) or 0
+    accuracy = round((correct_count / solved_count) * 100, 1) if solved_count else 0.0
+
+    avg_time_val = avg_time_row.get("avg_time")
+    if isinstance(avg_time_val, str):
+        try:
+            h, m, s = avg_time_val.split(":")
+            avg_seconds = int(float(h) * 3600 + float(m) * 60 + float(s))
+            avg_time_val = timedelta(seconds=avg_seconds)
+        except Exception:
+            avg_time_val = None
+    avg_time_display = None
+    if avg_time_val:
+        total_seconds = int(avg_time_val.total_seconds())
+        minutes, seconds = divmod(total_seconds, 60)
+        avg_time_display = f"{minutes}m {seconds}s" if minutes else f"{seconds}s"
+
+    # Recent attempts (join question metadata)
+    recent = query_all(
+        """
+        SELECT ua.question_id, ua.solved, ua.correct, ua.bookmarked, ua.starred,
+               ua.time_started, ua.time_took, q.session_code, q.subtopic
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        LIMIT 6
+        """,
+        (user_id,),
+    )
+
+    # Performance by subtopic
+    by_topic_raw = query_all(
+        """
+        SELECT q.subtopic,
+               COUNT(*) AS total,
+               SUM(CASE WHEN ua.correct = TRUE THEN 1 ELSE 0 END) AS correct
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s
+        GROUP BY q.subtopic
+        HAVING COUNT(*) > 0
+        ORDER BY total DESC
+        LIMIT 5
+        """,
+        (user_id,),
+    )
+    by_topic = []
+    for row in by_topic_raw:
+        total = row.get("total", 0) or 0
+        correct_val = row.get("correct", 0) or 0
+        pct = round((correct_val / total) * 100, 1) if total else 0
+        row["pct"] = pct
+        by_topic.append(row)
+
+    # Global leaderboard (by solved)
+    leaderboard = query_all(
+        """
+        SELECT u.name, u.user_id,
+               COUNT(*) FILTER (WHERE ua.solved = TRUE) AS solved,
+               COUNT(*) FILTER (WHERE ua.correct = TRUE) AS correct
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        GROUP BY u.user_id, u.name
+        ORDER BY solved DESC, correct DESC
+        LIMIT 10
+        """
+    )
+
+    bookmarked_rows = query_all(
+        """
+        SELECT ua.question_id, q.session_code, q.subtopic, ua.time_started
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s AND ua.bookmarked = TRUE
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        LIMIT 10
+        """,
+        (user_id,),
+    )
+
+    starred_rows = query_all(
+        """
+        SELECT ua.question_id, q.session_code, q.subtopic, ua.time_started
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s AND ua.starred = TRUE
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        LIMIT 10
+        """,
+        (user_id,),
+    )
+
+    saved = query_all(
+        """
+        SELECT q.question_id, q.image_base64, q.answer, q.session_code, q.subtopic,
+               ua.bookmarked, ua.starred, ua.time_started
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s AND (ua.bookmarked = TRUE OR ua.starred = TRUE)
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        """,
+        (user_id,),
+    )
+
+    context = {
+        "user": user,
+        "stats": {
+            "attempts": attempts,
+            "solved": solved_count,
+            "correct": correct_count,
+            "accuracy": accuracy,
+            "bookmarked": bookmarked.get("bookmarked", 0) or 0,
+            "starred": starred.get("starred", 0) or 0,
+            "avg_time": avg_time_display,
+        },
+        "recent": recent,
+        "by_topic": by_topic,
+        "leaderboard": leaderboard,
+        "bookmarked_rows": bookmarked_rows,
+        "starred_rows": starred_rows,
+        "saved": saved,
+    }
+    return render(request, "user_stats.html", context)
+
+
+def saved_questions(request):
+    """Practice bookmarked/starred questions quickly."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        messages.info(request, "Please log in to view saved questions.")
+        return redirect("login")
+
+    saved = query_all(
+        """
+        SELECT q.question_id, q.image_base64, q.answer, q.session_code, q.subtopic,
+               ua.bookmarked, ua.starred, ua.time_started
+        FROM user_activity ua
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE ua.user_id = %s AND (ua.bookmarked = TRUE OR ua.starred = TRUE)
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        """,
+        (user_id,),
+    )
+
+    return render(request, "saved_questions.html", {"saved": saved, "user_id": user_id})
 
 
 def about(request):
