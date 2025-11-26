@@ -1,5 +1,7 @@
 """Database helpers for PostgreSQL (Supabase)."""
 
+import os
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from django.conf import settings
@@ -91,12 +93,9 @@ def get_or_create_activity(user_id: str, question_id: str) -> dict:
 
 
 def get_next_user_id() -> str:
-    """Generate a simple incremental user_id like U1, U2, ..."""
-    last = query_one("SELECT user_id FROM users ORDER BY user_id DESC LIMIT 1")
-    if last and "user_id" in last:
-        try:
-            last_num = int(str(last["user_id"])[1:])
-            return f"U{last_num + 1}"
-        except (ValueError, TypeError):
-            pass
-    return "U1"
+    """Generate the next numeric user_id safely (avoids lexical ordering issues)."""
+    row = query_one(
+        "SELECT COALESCE(MAX(CAST(SUBSTRING(user_id FROM 2) AS INTEGER)), 0) AS max_num FROM users"
+    )
+    max_num = row.get("max_num", 0) if row else 0
+    return f"U{max_num + 1}"
