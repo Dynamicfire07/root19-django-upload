@@ -159,18 +159,20 @@ def practice_questions(request):
         (session_code, subtopic),
     )
     random.shuffle(docs)
+
+    user_id = request.session.get('user_id') or ""
+    guest_limit = None
+    if not user_id:
+        guest_limit = 2
+        docs = docs[:guest_limit]
+
     questions = [SimpleNamespace(**doc) for doc in docs]
 
     # ✅ Safely get user_id from session
-    user_id = request.session.get('user_id')
-    if not user_id:
-        # fallback (guest mode) if someone isn’t logged in
-        user_id = None
-
     return render(request, 'practice_questions.html', {
         'questions': questions,
         'user_id': user_id,
-        'limit': None if user_id else 2,
+        'limit': None if user_id else guest_limit,
     })
 
 
