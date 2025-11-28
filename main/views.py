@@ -458,7 +458,132 @@ def update_activity(request):
 @staff_member_required
 def user_activity_admin(request):
     """Display user activity records with summary statistics for admins."""
-    records = [SimpleNamespace(**row) for row in query_all("SELECT * FROM user_activity")]
+    def seconds_from_interval(value):
+        if value is None:
+            return None
+        if hasattr(value, "total_seconds"):
+            return float(value.total_seconds())
+        try:
+            return float(value)
+        except Exception:
+            return None
+
+    def humanize_seconds(seconds):
+        if seconds is None:
+            return None
+        total = int(seconds)
+        minutes, secs = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
+        if hours:
+            return f"{hours}h {minutes}m"
+        if minutes:
+            return f"{minutes}m {secs}s"
+        return f"{secs}s"
+
+    filters = {
+        "query": request.GET.get("q", "").strip(),
+        "status": request.GET.get("status", ""),
+        "correctness": request.GET.get("correctness", ""),
+        "saved": request.GET.get("saved", ""),
+        "range": request.GET.get("range", "all"),
+        "min_views": request.GET.get("min_views", ""),
+    }
+
+    conditions = []
+    params = []
+
+    if filters["query"]:
+        term = f"%{filters['query'].lower()}%"
+        conditions.append(
+            "(LOWER(u.name) LIKE %s OR LOWER(u.email) LIKE %s OR ua.user_id ILIKE %s OR ua.question_id ILIKE %s OR LOWER(q.subtopic) LIKE %s OR LOWER(q.session_code) LIKE %s)"
+        )
+        params.extend([term, term, term, term, term, term])
+
+    if filters["status"] == "solved":
+        conditions.append("ua.solved = TRUE")
+    elif filters["status"] == "unsolved":
+        conditions.append("ua.solved = FALSE")
+
+    if filters["correctness"] == "correct":
+        conditions.append("ua.correct = TRUE")
+    elif filters["correctness"] == "incorrect":
+        conditions.append("ua.correct = FALSE")
+
+    if filters["saved"] == "bookmarked":
+        conditions.append("ua.bookmarked = TRUE")
+    elif filters["saved"] == "starred":
+        conditions.append("ua.starred = TRUE")
+
+    range_map = {"7d": 7, "30d": 30, "90d": 90}
+    if filters["range"] in range_map:
+        start_time = datetime.now(timezone.utc) - timedelta(days=range_map[filters["range"]])
+        conditions.append("ua.time_started >= %s")
+        params.append(start_time)
+
+    if filters["min_views"].isdigit():
+        conditions.append("ua.times_viewed >= %s")
+        params.append(int(filters["min_views"]))
+    else:
+        filters["min_views"] = ""
+
+    where_sql = " AND ".join(conditions) if conditions else "TRUE"
+    params_tuple = tuple(params)
+
+    records_raw = query_all(
+        f"""
+        SELECT ua.*, u.name AS user_name, u.email, q.session_code, q.subtopic, q.year, q.paper_code
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE {where_sql}
+        ORDER BY COALESCE(ua.time_started, NOW()) DESC
+        LIMIT 300
+        """,
+        params_tuple,
+    )
+
+    for row in records_raw:
+        row["time_spent_seconds"] = seconds_from_interval(row.get("time_took"))
+        row["time_spent_display"] = humanize_seconds(row.get("time_spent_seconds"))
+        if row.get("correct"):
+            row["result_label"] = "Correct"
+        elif row.get("solved"):
+            row["result_label"] = "Solved"
+        else:
+            row["result_label"] = "In progress"
+
+    records = [SimpleNamespace(**row) for row in records_raw]
+
+    filtered_row = query_one(
+        f"""
+        SELECT
+            COUNT(*) AS total_records,
+            COUNT(*) FILTER (WHERE ua.solved = TRUE) AS solved,
+            COUNT(*) FILTER (WHERE ua.correct = TRUE) AS correct,
+            COUNT(*) FILTER (WHERE ua.bookmarked = TRUE) AS bookmarked,
+            COUNT(*) FILTER (WHERE ua.starred = TRUE) AS starred,
+            AVG(ua.times_viewed) AS avg_views,
+            EXTRACT(EPOCH FROM AVG(ua.time_took)) AS avg_time_seconds
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE {where_sql}
+        """,
+        params_tuple,
+    ) or {}
+
+    solved_count = filtered_row.get("solved", 0) or 0
+    correct_count = filtered_row.get("correct", 0) or 0
+    filtered_summary = {
+        "total_records": filtered_row.get("total_records", 0) or 0,
+        "solved": solved_count,
+        "correct": correct_count,
+        "bookmarked": filtered_row.get("bookmarked", 0) or 0,
+        "starred": filtered_row.get("starred", 0) or 0,
+        "accuracy": round((correct_count / solved_count) * 100, 1) if solved_count else 0.0,
+        "avg_views": round(filtered_row.get("avg_views", 0) or 0, 1),
+        "avg_time_display": humanize_seconds(filtered_row.get("avg_time_seconds")),
+    }
 
     summary = {
         "total_users": query_one("SELECT COUNT(*) AS cnt FROM users")['cnt'],
@@ -470,7 +595,73 @@ def user_activity_admin(request):
         "bookmarked": query_one("SELECT COUNT(*) AS cnt FROM user_activity WHERE bookmarked = TRUE")['cnt'],
     }
 
-    return render(request, "user_activity_admin.html", {"records": records, "summary": summary})
+    top_subtopics_raw = query_all(
+        f"""
+        SELECT q.subtopic,
+               COUNT(*) AS attempts,
+               COUNT(*) FILTER (WHERE ua.correct = TRUE) AS correct,
+               COUNT(*) FILTER (WHERE ua.solved = TRUE) AS solved
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE {where_sql}
+        GROUP BY q.subtopic
+        ORDER BY attempts DESC
+        LIMIT 6
+        """,
+        params_tuple,
+    )
+    top_subtopics = []
+    for row in top_subtopics_raw:
+        attempts = row.get("attempts", 0) or 0
+        correct_val = row.get("correct", 0) or 0
+        accuracy = round((correct_val / attempts) * 100, 1) if attempts else 0
+        row["accuracy"] = accuracy
+        top_subtopics.append(row)
+
+    top_users_raw = query_all(
+        f"""
+        SELECT u.user_id, u.name, u.email,
+               COUNT(*) AS attempts,
+               COUNT(*) FILTER (WHERE ua.solved = TRUE) AS solved,
+               COUNT(*) FILTER (WHERE ua.correct = TRUE) AS correct
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        JOIN questions q ON q.question_id = ua.question_id
+        WHERE {where_sql}
+        GROUP BY u.user_id, u.name, u.email
+        ORDER BY solved DESC, correct DESC, attempts DESC
+        LIMIT 5
+        """,
+        params_tuple,
+    )
+    top_users = []
+    for row in top_users_raw:
+        solved_val = row.get("solved", 0) or 0
+        correct_val = row.get("correct", 0) or 0
+        row["accuracy"] = round((correct_val / solved_val) * 100, 1) if solved_val else 0
+        top_users.append(row)
+
+    filters["range_label"] = {"7d": "Past 7 days", "30d": "Past 30 days", "90d": "Past 90 days"}.get(filters["range"], "All time")
+    filters["has_active"] = any([
+        filters["query"],
+        filters["status"],
+        filters["correctness"],
+        filters["saved"],
+        filters["range"] in range_map,
+        filters["min_views"],
+    ])
+
+    context = {
+        "records": records,
+        "summary": summary,
+        "filtered": filtered_summary,
+        "filters": filters,
+        "top_subtopics": top_subtopics,
+        "top_users": top_users,
+    }
+
+    return render(request, "user_activity_admin.html", context)
 
 
 # -------------------------

@@ -1,102 +1,326 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Activity</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    {% include '_app_styles.html' %}
+    <style>
+        .activity-hero { background: linear-gradient(135deg,#0b5ed7,#0f172a); color:#fff; border-radius:16px; padding:1.5rem; box-shadow:0 1.2rem 2.4rem rgba(0,0,0,.12); }
+        .activity-hero .pill { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .85rem; border-radius:999px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2); font-weight:600; }
+        .summary-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:1rem; height:100%; box-shadow:0 1rem 2rem rgba(0,0,0,.05); }
+        .summary-card .label { text-transform:uppercase; letter-spacing:.04em; font-size:.8rem; color:#6b7280; }
+        .summary-card .value { font-size:1.6rem; font-weight:800; color:#0f172a; }
+        .summary-card .meta { font-size:.9rem; color:#6b7280; }
+        .filter-card { border-radius:16px; }
+        .table thead th { text-transform:uppercase; letter-spacing:.04em; font-size:.8rem; color:#6b7280; background:#f8fafc; }
+        .badge-soft { background:#eef2ff; color:#1d4ed8; border:1px solid #d9e1ff; }
+        .badge-soft-success { background:#ecfdf3; color:#0f5132; border:1px solid #d1fae5; }
+        .badge-soft-danger { background:#fff1f2; color:#b42318; border:1px solid #ffe4e6; }
+        .mini-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+        .table-hover tbody tr:hover { background:#f8fafc; }
+    </style>
 </head>
-<body>
-{% include 'navbar.html' %}
-<div class="container mt-4">
-    <h1>User Activity</h1>
-    <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
-        <div class="col">
-            <div class="card text-center">
+<body class="stats-page">
+    {% include 'navbar.html' %}
+
+    <main class="py-4 py-md-5">
+        <div class="container">
+            <div class="activity-hero d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div>
+                    <div class="pill text-white-75">
+                        <span class="mini-dot me-1" style="background:#22c55e; box-shadow:0 0 0 6px rgba(34,197,94,.16);"></span>
+                        Live oversight
+                    </div>
+                    <h1 class="mt-2 mb-1 fw-bold">User activity monitor</h1>
+                    <p class="mb-0 text-white-75">Track attempts, accuracy, saved items, and engagement across the platform.</p>
+                </div>
+                <div class="text-end">
+                    <div class="pill">Scope: {{ filters.range_label }}</div>
+                    {% if filters.has_active %}
+                        <div class="text-white-75 small mt-1">Filters active — showing {{ records|length }} rows</div>
+                    {% else %}
+                        <div class="text-white-75 small mt-1">No filters applied (max 300 recent rows)</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <div class="label">Filtered attempts</div>
+                        <div class="value">{{ filtered.total_records|default:0 }}</div>
+                        <div class="meta">Across current filters</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <div class="label">Solved</div>
+                        <div class="value">{{ filtered.solved|default:0 }}</div>
+                        <div class="meta text-success">Accuracy {{ filtered.accuracy }}%</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <div class="label">Saved</div>
+                        <div class="value">{{ filtered.bookmarked|add:filtered.starred }}</div>
+                        <div class="meta">Bookmarked {{ filtered.bookmarked }} • Starred {{ filtered.starred }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card">
+                        <div class="label">Engagement</div>
+                        <div class="value">{{ filtered.avg_views|default:"0.0" }} views</div>
+                        <div class="meta">Avg time {{ filtered.avg_time_display|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1 mb-2">
+                <div class="col-md-4">
+                    <div class="summary-card">
+                        <div class="label">Total users</div>
+                        <div class="value">{{ summary.total_users }}</div>
+                        <div class="meta">All time</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="summary-card">
+                        <div class="label">Questions</div>
+                        <div class="value">{{ summary.total_questions }}</div>
+                        <div class="meta">In bank</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="summary-card">
+                        <div class="label">Activity records</div>
+                        <div class="value">{{ summary.total_records }}</div>
+                        <div class="meta">Solved {{ summary.solved }} • Correct {{ summary.correct }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card filter-card shadow-sm mb-4">
                 <div class="card-body">
-                    <h6 class="card-title">Users</h6>
-                    <p class="card-text fw-bold">{{ summary.total_users }}</p>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-0">Filters</h5>
+                            <small class="text-muted">Combine search with status, correctness, saved state, and timeframe.</small>
+                        </div>
+                        {% if filters.has_active %}
+                            <span class="badge bg-primary-subtle text-primary">Active</span>
+                        {% endif %}
+                    </div>
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-lg-4">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="q" value="{{ filters.query }}" class="form-control" placeholder="User, email, question ID, session, or subtopic">
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label">Range</label>
+                            <select class="form-select" name="range">
+                                <option value="all" {% if filters.range == "all" %}selected{% endif %}>All time</option>
+                                <option value="7d" {% if filters.range == "7d" %}selected{% endif %}>Past 7 days</option>
+                                <option value="30d" {% if filters.range == "30d" %}selected{% endif %}>Past 30 days</option>
+                                <option value="90d" {% if filters.range == "90d" %}selected{% endif %}>Past 90 days</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label">Solved status</label>
+                            <select class="form-select" name="status">
+                                <option value="" {% if not filters.status %}selected{% endif %}>All</option>
+                                <option value="solved" {% if filters.status == "solved" %}selected{% endif %}>Solved</option>
+                                <option value="unsolved" {% if filters.status == "unsolved" %}selected{% endif %}>Unsolved</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label">Correctness</label>
+                            <select class="form-select" name="correctness">
+                                <option value="" {% if not filters.correctness %}selected{% endif %}>All</option>
+                                <option value="correct" {% if filters.correctness == "correct" %}selected{% endif %}>Correct</option>
+                                <option value="incorrect" {% if filters.correctness == "incorrect" %}selected{% endif %}>Incorrect</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label">Saved</label>
+                            <select class="form-select" name="saved">
+                                <option value="" {% if not filters.saved %}selected{% endif %}>All</option>
+                                <option value="bookmarked" {% if filters.saved == "bookmarked" %}selected{% endif %}>Bookmarked</option>
+                                <option value="starred" {% if filters.saved == "starred" %}selected{% endif %}>Starred</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label">Min views</label>
+                            <input type="number" name="min_views" value="{{ filters.min_views }}" class="form-control" min="0" placeholder="e.g. 3">
+                        </div>
+                        <div class="col-12 d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary">Apply filters</button>
+                            <a href="{% url 'user_activity_admin' %}" class="btn btn-outline-secondary">Reset</a>
+                            <div class="ms-auto text-muted small">
+                                Showing up to 300 most recent rows that match your filters.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-lg-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="mb-0">Top subtopics</h5>
+                                    <small class="text-muted">Most attempted within the current filters</small>
+                                </div>
+                                <span class="badge bg-light text-dark">{{ filters.range_label }}</span>
+                            </div>
+                            {% if top_subtopics %}
+                                {% for item in top_subtopics %}
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="fw-semibold">{{ item.subtopic }}</div>
+                                            <small class="text-muted">{{ item.correct }}/{{ item.attempts }} correct</small>
+                                        </div>
+                                        <div class="progress slim mt-1">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ item.accuracy }}%;" aria-valuenow="{{ item.accuracy }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-muted">No subtopic data for this view.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="mb-0">Top users</h5>
+                                    <small class="text-muted">Leads by solved and accuracy</small>
+                                </div>
+                                <span class="badge bg-light text-dark">{{ filters.range_label }}</span>
+                            </div>
+                            {% if top_users %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Solved</th>
+                                                <th>Correct</th>
+                                                <th>Accuracy</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in top_users %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold">{{ user.name|default:user.user_id }}</div>
+                                                        <div class="text-muted small">{{ user.email }}</div>
+                                                    </td>
+                                                    <td>{{ user.solved }}</td>
+                                                    <td>{{ user.correct }}</td>
+                                                    <td>{{ user.accuracy }}%</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-muted">No user leaderboard for this view.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-0">Activity log</h5>
+                            <small class="text-muted">User, session, and correctness details</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="badge badge-soft">{{ filters.range_label }}</span>
+                            {% if filters.saved %}<span class="badge badge-soft">Saved: {{ filters.saved }}</span>{% endif %}
+                            {% if filters.status %}<span class="badge badge-soft">Status: {{ filters.status }}</span>{% endif %}
+                            {% if filters.correctness %}<span class="badge badge-soft">Result: {{ filters.correctness }}</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Question</th>
+                                    <th>Result</th>
+                                    <th>Saved</th>
+                                    <th>Engagement</th>
+                                    <th>Started</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in records %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">{{ a.user_name|default:a.user_id }}</div>
+                                            <div class="text-muted small">{{ a.email }}</div>
+                                            <div class="text-muted small">ID: {{ a.user_id }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">{{ a.session_code|default:"Question" }}</div>
+                                            <div class="text-muted small">{{ a.subtopic|default:"—" }}</div>
+                                            <div class="text-muted small">QID: {{ a.question_id }}</div>
+                                        </td>
+                                        <td>
+                                            {% if a.result_label == "Correct" %}
+                                                <span class="badge badge-soft-success">Correct</span>
+                                            {% elif a.result_label == "Solved" %}
+                                                <span class="badge bg-warning-subtle text-warning">Solved</span>
+                                            {% else %}
+                                                <span class="badge badge-soft">In progress</span>
+                                            {% endif %}
+                                            <div class="text-muted small mt-1">Times viewed: {{ a.times_viewed }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% if a.bookmarked %}<span class="badge bg-info-subtle text-info"><i class="bi bi-bookmark"></i> Bookmarked</span>{% endif %}
+                                                {% if a.starred %}<span class="badge bg-primary-subtle text-primary"><i class="bi bi-star-fill"></i> Starred</span>{% endif %}
+                                                {% if not a.bookmarked and not a.starred %}<span class="text-muted small">—</span>{% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold">{{ a.time_spent_display|default:"—" }}</div>
+                                            <div class="text-muted small">Avg view depth: {{ a.times_viewed }}</div>
+                                        </td>
+                                        <td class="text-muted small">
+                                            {% if a.time_started %}{{ a.time_started|date:"M j, Y • H:i" }}{% else %}Not started{% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            No activity matches these filters yet. Try widening the date range or clearing saved/result filters.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Questions</h6>
-                    <p class="card-text fw-bold">{{ summary.total_questions }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Activity Records</h6>
-                    <p class="card-text fw-bold">{{ summary.total_records }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Solved</h6>
-                    <p class="card-text fw-bold">{{ summary.solved }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Correct</h6>
-                    <p class="card-text fw-bold">{{ summary.correct }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Starred</h6>
-                    <p class="card-text fw-bold">{{ summary.starred }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title">Bookmarked</h6>
-                    <p class="card-text fw-bold">{{ summary.bookmarked }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Question ID</th>
-                <th>Solved</th>
-                <th>Correct</th>
-                <th>Bookmarked</th>
-                <th>Starred</th>
-                <th>Times Viewed</th>
-                <th>Time Spent (seconds)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for a in records %}
-            <tr>
-                <td>{{ a.user_id }}</td>
-                <td>{{ a.question_id }}</td>
-                <td>{{ a.solved }}</td>
-                <td>{{ a.correct }}</td>
-                <td>{{ a.bookmarked }}</td>
-                <td>{{ a.starred }}</td>
-                <td>{{ a.times_viewed }}</td>
-                <td>{% if a.time_took %}{{ a.time_took.total_seconds }}{% else %}-{% endif %}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% include 'footer.html' %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </main>
+
+    {% include 'footer.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

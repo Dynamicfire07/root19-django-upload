@@ -11,43 +11,61 @@
   {% include 'navbar.html' %}
   <main class="container my-4">
     <h1 class="h3 mb-3">Terms of Service</h1>
-    <p class="text-muted">Last updated: {{ now|default:"2025-01-01" }}</p>
+    <p class="text-muted">Last updated: {% now "F j, Y" %}</p>
 
     <h2 class="h5 mt-4">1. Acceptance of Terms</h2>
-    <p>By accessing or using ROOT 19, you agree to be bound by these Terms of Service. If you do not agree, do not use the site.</p>
+    <p>By accessing or using ROOT 19, you agree to these Terms. If you do not agree, do not access or use the service.</p>
 
     <h2 class="h5 mt-4">2. Eligibility</h2>
-    <p>You must be legally capable of entering into a binding agreement in your jurisdiction to use this site.</p>
+    <p>You must be legally capable of entering into a binding agreement in your jurisdiction and comply with all applicable laws when using ROOT 19.</p>
 
-    <h2 class="h5 mt-4">3. Accounts</h2>
-    <p>You are responsible for maintaining the confidentiality of your login credentials and for all activities under your account.</p>
+    <h2 class="h5 mt-4">3. Accounts and Security</h2>
+    <p>You are responsible for maintaining the confidentiality of your login credentials and for all activity under your account. Promptly notify us of any unauthorized use or suspected breach of security.</p>
 
-    <h2 class="h5 mt-4">4. Permitted Use</h2>
-    <p>Use ROOT 19 only for lawful purposes. You may not reverse engineer, scrape, or misuse any part of the service.</p>
+    <h2 class="h5 mt-4">4. Acceptable Use</h2>
+    <p>Use ROOT 19 only for lawful purposes. You agree not to:</p>
+    <ul>
+      <li>Interfere with or disrupt the service, its servers, or networks.</li>
+      <li>Probe, scan, or test the vulnerability of the platform, or attempt to bypass security or authentication measures.</li>
+      <li>Upload malicious code or content that infringes, violates, or misappropriates another party’s rights.</li>
+      <li>Scrape, copy, or reverse engineer the service except as permitted by law.</li>
+    </ul>
 
-    <h2 class="h5 mt-4">5. Content and Intellectual Property</h2>
-    <p>All materials on ROOT 19, including questions and UI assets, are owned by us or our licensors and are protected by applicable laws. You may not reproduce, distribute, or create derivative works without permission, except as permitted by law.</p>
+    <h2 class="h5 mt-4">5. User Content</h2>
+    <p>You may submit content such as feedback, bug reports, or other materials. You retain ownership of your submissions, but you grant ROOT 19 a worldwide, non-exclusive, royalty-free license to use, host, reproduce, modify, and display that content solely to operate, improve, and secure the service.</p>
 
-    <h2 class="h5 mt-4">6. User Submissions</h2>
-    <p>By submitting content (including bug reports), you grant ROOT 19 a non-exclusive, worldwide, royalty-free license to use, reproduce, and display that content for operation and improvement of the service.</p>
+    <h2 class="h5 mt-4">6. Intellectual Property</h2>
+    <p>All service content, features, and functionality are owned by ROOT 19 or its licensors and are protected by intellectual property laws. Except for the limited rights expressly granted to you, no licenses or rights are transferred by use of the service.</p>
 
-    <h2 class="h5 mt-4">7. Prohibited Conduct</h2>
-    <p>Do not upload malicious code, attempt unauthorized access, or engage in activity that disrupts the service or violates any law.</p>
+    <h2 class="h5 mt-4">7. Availability and Changes</h2>
+    <p>We may modify, suspend, or discontinue any part of the service without notice. We do not guarantee the service will be uninterrupted or error-free.</p>
 
-    <h2 class="h5 mt-4">8. Disclaimers</h2>
-    <p>ROOT 19 is provided “as is” and “as available” without warranties of any kind. See the Disclaimer for more information.</p>
+    <h2 class="h5 mt-4">8. Privacy</h2>
+    <p>Your use of ROOT 19 is also subject to our Privacy Policy. Please review it to understand how we collect and use information.</p>
 
-    <h2 class="h5 mt-4">9. Limitation of Liability</h2>
-    <p>To the maximum extent permitted by law, ROOT 19 and its contributors are not liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the site.</p>
+    <h2 class="h5 mt-4">9. Third-Party Services</h2>
+    <p>ROOT 19 may include links or integrations with third-party services. We are not responsible for third-party content, policies, or practices.</p>
 
-    <h2 class="h5 mt-4">10. Termination</h2>
-    <p>We may suspend or terminate access to the service at any time for any reason, including violation of these Terms.</p>
+    <h2 class="h5 mt-4">10. Disclaimers</h2>
+    <p>ROOT 19 is provided “as is” and “as available” without warranties of any kind, whether express, implied, or statutory, including warranties of merchantability, fitness for a particular purpose, and non-infringement.</p>
 
-    <h2 class="h5 mt-4">11. Changes to Terms</h2>
-    <p>We may update these Terms from time to time. Continued use after changes constitutes acceptance of the updated Terms.</p>
+    <h2 class="h5 mt-4">11. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by law, ROOT 19 and its contributors will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of profits, data, or goodwill arising from or related to your use of the service.</p>
 
-    <h2 class="h5 mt-4">12. Contact</h2>
-    <p>Questions? Please use the Report Issue link in the navigation or contact us via the site.</p>
+    <h2 class="h5 mt-4">12. Indemnification</h2>
+    <p>You agree to indemnify and hold ROOT 19 and its contributors harmless from any claims, damages, or expenses arising from your use of the service or violation of these Terms.</p>
+
+    <h2 class="h5 mt-4">13. Termination</h2>
+    <p>We may suspend or terminate your access at any time, with or without notice, if we believe you have violated these Terms or applicable law.</p>
+
+    <h2 class="h5 mt-4">14. Governing Law</h2>
+    <p>These Terms are governed by the laws of the jurisdiction in which ROOT 19 operates, without regard to conflict of law principles. Any disputes will be resolved in that jurisdiction’s courts where permitted by law.</p>
+
+    <h2 class="h5 mt-4">15. Changes to Terms</h2>
+    <p>We may update these Terms from time to time. Continued use after changes take effect constitutes acceptance of the revised Terms.</p>
+
+    <h2 class="h5 mt-4">16. Contact</h2>
+    <p>Questions or concerns? Use the “Report Issue” link in the navigation or contact us through the site.</p>
   </main>
   {% include 'footer.html' %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
