@@ -513,11 +513,15 @@ def leaderboard(request):
                 "correct": row.get("correct_count", 0) or 0,
                 "solved": row.get("solved_count", 0) or 0,
                 "attempts": row.get("attempts", 0) or 0,
-                "accuracy": round(
-                    ((row.get("correct_count", 0) or 0) / (row.get("attempts", 0) or 1))
-                    * 100,
-                    1,
-                )
+                "accuracy": (
+                    round(
+                        ((row.get("correct_count", 0) or 0) / (row.get("solved_count", 0) or 1))
+                        * 100,
+                        1,
+                    )
+                    if (row.get("solved_count", 0) or 0) > 0
+                    else 0
+                ),
             }
         )
 
