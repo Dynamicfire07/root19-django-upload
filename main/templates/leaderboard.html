@@ -40,7 +40,7 @@
                         <div class="display-6 fw-bold">{{ second.correct }}</div>
                         <div class="podium-block bg-white text-dark border" style="height:160px;">
                             <div class="fw-bold">{{ second.name }}</div>
-                            <div class="small text-muted">{{ second.solved }} solved · {{ second.attempts }} attempts</div>
+                            <div class="small text-muted">{{ second.solved }} solved</div>
                             <div class="small text-muted">Accuracy: {{ second.accuracy }}%</div>
                         </div>
                     </div>
@@ -53,7 +53,7 @@
                         <div class="display-5 fw-bold text-warning"><i class="bi bi-trophy-fill"></i> {{ first.correct }}</div>
                         <div class="podium-block bg-white text-dark border border-warning" style="height:200px;">
                             <div class="fw-bold">{{ first.name }}</div>
-                            <div class="small text-muted">{{ first.solved }} solved · {{ first.attempts }} attempts</div>
+                            <div class="small text-muted">{{ first.solved }} solved</div>
                             <div class="small text-muted">Accuracy: {{ first.accuracy }}%</div>
                         </div>
                     </div>
@@ -66,7 +66,7 @@
                         <div class="display-6 fw-bold">{{ third.correct }}</div>
                         <div class="podium-block bg-white text-dark border" style="height:140px;">
                             <div class="fw-bold">{{ third.name }}</div>
-                            <div class="small text-muted">{{ third.solved }} solved · {{ third.attempts }} attempts</div>
+                            <div class="small text-muted">{{ third.solved }} solved</div>
                             <div class="small text-muted">Accuracy: {{ third.accuracy }}%</div>
                         </div>
                     </div>
@@ -86,7 +86,6 @@
                                     <th>Participant</th>
                                     <th>Correct</th>
                                     <th>Solved</th>
-                                    <th>Attempts</th>
                                     <th>Accuracy</th>
                                 </tr>
                             </thead>
@@ -97,7 +96,6 @@
                                     <td>{{ row.name }}</td>
                                     <td class="fw-bold">{{ row.correct }}</td>
                                     <td>{{ row.solved }}</td>
-                                    <td class="text-muted">{{ row.attempts }}</td>
                                     <td>{{ row.accuracy }}%</td>
                                 </tr>
                                 {% endfor %}
