@@ -24,22 +24,43 @@
                         <th>Severity</th>
                         <th>Status</th>
                         <th>Reported</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for bug in bugs %}
-                    <tr onclick="window.location='/staff/bugs/{{ bug.id }}/'" style="cursor:pointer;">
+                    <tr onclick="if (!event.target.closest('form')) { window.location='/staff/bugs/{{ bug.id }}/'; }" style="cursor:pointer;">
                         <td class="text-muted">{{ bug.id }}</td>
                         <td>
                             <a href="/staff/bugs/{{ bug.id }}/" class="text-decoration-none">{{ bug.title }}</a>
                         </td>
                         <td><span class="badge severity-{{ bug.severity }}">{{ bug.severity|title }}</span></td>
-                        <td>{{ bug.status|title }}</td>
+                        <td>{{ bug.status|replace:"_"," "|title }}</td>
                         <td>{{ bug.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <form method="post" action="/staff/bugs/{{ bug.id }}/status/" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="closed">
+                                <input type="hidden" name="next" value="/staff/bugs/">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary" {% if bug.status == 'closed' %}disabled{% endif %}>
+                                    Close
+                                </button>
+                            </form>
+                            {% if bug.status == 'closed' %}
+                            <form method="post" action="/staff/bugs/{{ bug.id }}/status/" class="d-inline ms-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="open">
+                                <input type="hidden" name="next" value="/staff/bugs/">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    Reopen
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">No bug reports yet.</td>
+                        <td colspan="6" class="text-center text-muted py-4">No bug reports yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

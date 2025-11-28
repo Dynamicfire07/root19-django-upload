@@ -14,6 +14,9 @@
                     <a class="nav-link" href="/question-bank/">Question Bank</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="/leaderboard/">Leaderboard</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="/about/">About</a>
                 </li>
                 <li class="nav-item">
@@ -30,16 +33,21 @@
                     </ul>
                 </li>
                 {% if request.user.is_staff %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/staff/user-activity/">Activity</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/staff/bugs/">Bugs</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Admin Tools
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                        <li><a class="dropdown-item" href="/staff/user-activity/">Activity</a></li>
+                        <li><a class="dropdown-item" href="/staff/bugs/">Bugs</a></li>
+                        <li><a class="dropdown-item" href="/staff/password-requests/">Password Requests</a></li>
+                        <li><a class="dropdown-item" href="/staff/reset-password/">Reset Password</a></li>
+                    </ul>
                 </li>
                 {% endif %}
                 {% if request.session.user_id %}
                 <li class="nav-item">
-                    <a class="nav-link" href="/user-stats/">My Stats</a>
+                    <a class="nav-link" href="/user-stats/">🔥 My Stats</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/progress/">Progress</a>
@@ -54,8 +62,12 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Welcome, {{ request.session.user_name }}
+                        {% if streak_current %}
+                            <span class="badge bg-warning-subtle text-warning ms-1">🔥 {{ streak_current }}d</span>
+                        {% endif %}
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="/change-password/">Change Password</a></li>
                         <li><a class="dropdown-item" href="/logout/">Logout</a></li>
                     </ul>
                 </li>

@@ -17,14 +17,46 @@
       <a class="btn btn-outline-secondary" href="/staff/bugs/">Back</a>
     </div>
 
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
     <div class="card shadow-sm mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
           <h4 class="mb-0">{{ bug.title }}</h4>
           <div class="d-flex align-items-center gap-2">
             <span class="badge severity-{{ bug.severity }}">{{ bug.severity|title }}</span>
-            <span class="badge bg-dark">{{ bug.status|title }}</span>
+            <span class="badge bg-dark">{{ bug.status|replace:"_"," "|title }}</span>
           </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <form method="post" action="/staff/bugs/{{ bug.id }}/status/">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="closed">
+            <input type="hidden" name="next" value="/staff/bugs/{{ bug.id }}/">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" {% if bug.status == 'closed' %}disabled{% endif %}>
+              Close issue
+            </button>
+          </form>
+          <form method="post" action="/staff/bugs/{{ bug.id }}/status/">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="in_progress">
+            <input type="hidden" name="next" value="/staff/bugs/{{ bug.id }}/">
+            <button type="submit" class="btn btn-sm btn-outline-primary" {% if bug.status == 'in_progress' %}disabled{% endif %}>
+              Mark in progress
+            </button>
+          </form>
+          <form method="post" action="/staff/bugs/{{ bug.id }}/status/">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="open">
+            <input type="hidden" name="next" value="/staff/bugs/{{ bug.id }}/">
+            <button type="submit" class="btn btn-sm btn-outline-success" {% if bug.status == 'open' %}disabled{% endif %}>
+              Reopen
+            </button>
+          </form>
         </div>
         {% if bug.contact_email %}
         <div class="text-muted small mb-3">Reporter contact: {{ bug.contact_email }}</div>

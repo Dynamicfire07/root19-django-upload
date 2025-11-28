@@ -8,6 +8,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import random
+import secrets
+import string
 import json
 import typing as _t
 
@@ -32,6 +34,12 @@ def display_session_code(code: str) -> str:
         return code or ""
     return code.zfill(4)
 
+
+def generate_temp_password(length: int = 12) -> str:
+    """Generate a readable temporary password."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
 from .db import (
     query_one,
     query_all,
@@ -39,6 +47,7 @@ from .db import (
     get_next_user_id,
     get_or_create_activity,
 )
+from .streaks import compute_streak
 from .models import BugReport
 
 
@@ -132,6 +141,67 @@ def logout_view(request):
 
     return redirect('login')
 
+
+def change_password(request):
+    """Allow a logged-in user to change their password by confirming the current one."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        messages.info(request, "Please log in to change your password.")
+        return redirect("login")
+
+    user = query_one("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    if not user:
+        messages.error(request, "Account not found.")
+        return redirect("login")
+
+    if request.method == "POST":
+        current_password = request.POST.get("current_password", "")
+        new_password = request.POST.get("new_password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        if not current_password or not new_password or not confirm_password:
+            messages.error(request, "Please fill out all fields.")
+            return redirect("change_password")
+
+        if new_password != confirm_password:
+            messages.error(request, "New passwords do not match.")
+            return redirect("change_password")
+
+        if not check_password(current_password, user.get("password", "")):
+            messages.error(request, "Current password is incorrect.")
+            return redirect("change_password")
+
+        hashed = make_password(new_password)
+        execute(
+            "UPDATE users SET password = %s WHERE user_id = %s",
+            (hashed, user_id),
+        )
+        messages.success(request, "Password updated successfully.")
+        return redirect("change_password")
+
+    return render(request, "change_password.html")
+
+
+def password_reset_request(request):
+    """Let users raise a password reset request by email (manual handling)."""
+    ensure_password_request_table()
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        reason = request.POST.get("reason", "").strip()
+        if not email:
+            messages.error(request, "Email is required.")
+            return redirect("password_reset_request")
+
+        execute(
+            "INSERT INTO password_reset_requests (email, reason) VALUES (%s, %s)",
+            (email, reason or None),
+        )
+        messages.success(request, "Request received. We'll review and help you reset your password.")
+        return redirect("password_reset_request")
+
+    return render(request, "password_reset_request.html")
+
 # -------------------------
 # MAIN PAGES
 # -------------------------
@@ -156,6 +226,29 @@ def ensure_study_progress_table():
             UNIQUE(user_id, session_code, subtopic)
         );
         """
+    )
+
+
+def ensure_password_request_table():
+    """Create password_reset_requests table if missing."""
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_requests (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            reason TEXT,
+            status VARCHAR(20) DEFAULT 'open',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            handled_at TIMESTAMPTZ
+        );
+        """
+    )
+    # Backfill missing columns for existing deployments.
+    execute(
+        "ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open';"
+    )
+    execute(
+        "ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS handled_at TIMESTAMPTZ;"
     )
 
 
@@ -366,6 +459,8 @@ def user_stats(request):
         (user_id,),
     )
 
+    streak = compute_streak(user_id)
+
     context = {
         "user": user,
         "stats": {
@@ -383,8 +478,57 @@ def user_stats(request):
         "bookmarked_rows": bookmarked_rows,
         "starred_rows": starred_rows,
         "saved": saved,
+        "streak": streak,
     }
     return render(request, "user_stats.html", context)
+
+
+def leaderboard(request):
+    """Public leaderboard ranked by correct answers."""
+    rows = query_all(
+        """
+        SELECT u.user_id,
+               COALESCE(NULLIF(u.name, ''), u.email) AS display_name,
+               u.email,
+               COUNT(*) FILTER (WHERE ua.correct = TRUE) AS correct_count,
+               COUNT(*) FILTER (WHERE ua.solved = TRUE) AS solved_count,
+               COUNT(*) AS attempts
+        FROM user_activity ua
+        JOIN users u ON u.user_id = ua.user_id
+        GROUP BY u.user_id, u.name, u.email
+        HAVING COUNT(*) FILTER (WHERE ua.correct = TRUE) > 0
+        ORDER BY correct_count DESC, attempts DESC, display_name
+        LIMIT 50
+        """
+    )
+
+    leaderboard_rows = []
+    for idx, row in enumerate(rows, start=1):
+        leaderboard_rows.append(
+            {
+                "rank": idx,
+                "user_id": row.get("user_id"),
+                "name": row.get("display_name") or row.get("email") or "Anonymous",
+                "email": row.get("email"),
+                "correct": row.get("correct_count", 0) or 0,
+                "solved": row.get("solved_count", 0) or 0,
+                "attempts": row.get("attempts", 0) or 0,
+                "accuracy": round(
+                    ((row.get("correct_count", 0) or 0) / (row.get("attempts", 0) or 1))
+                    * 100,
+                    1,
+                )
+            }
+        )
+
+    top_three = leaderboard_rows[:3]
+    rest = leaderboard_rows[3:]
+
+    return render(
+        request,
+        "leaderboard.html",
+        {"top_three": top_three, "rest": rest, "rows": leaderboard_rows},
+    )
 
 
 def progress_tracker(request):
@@ -818,6 +962,54 @@ def user_activity_admin(request):
     return render(request, "user_activity_admin.html", context)
 
 
+@staff_member_required
+def staff_reset_password(request):
+    """Allow staff to overwrite a user's password and issue a temp password."""
+    users = query_all("SELECT user_id, name, email FROM users ORDER BY email")
+    generated = None
+    target = None
+    selected_user_id = None
+
+    prefill_email = request.GET.get("email", "").strip()
+    if prefill_email:
+        for u in users:
+            if u.get("email", "").lower() == prefill_email.lower():
+                selected_user_id = u.get("user_id")
+                break
+
+    if request.method == "POST":
+        target_id = request.POST.get("user_id", "").strip()
+        new_password = request.POST.get("new_password", "").strip()
+        target = query_one("SELECT user_id, name, email FROM users WHERE user_id = %s", (target_id,))
+        selected_user_id = target_id
+
+        if not target:
+            messages.error(request, "User not found.")
+            return redirect("staff_reset_password")
+
+        if not new_password:
+            new_password = generate_temp_password()
+
+        execute(
+            "UPDATE users SET password = %s WHERE user_id = %s",
+            (make_password(new_password), target_id),
+        )
+        generated = new_password
+        messages.success(request, f"Temporary password set for {target.get('email')}.")
+
+    return render(
+        request,
+        "staff_reset_password.html",
+        {
+            "users": users,
+            "generated": generated,
+            "target": target,
+            "selected_user_id": selected_user_id,
+            "prefill_email": prefill_email,
+        },
+    )
+
+
 # -------------------------
 # BUG REPORTING
 # -------------------------
@@ -870,6 +1062,76 @@ def staff_bug_detail(request, bug_id: int):
         return redirect("staff_bug_list")
     # Use app templates loader (APP_DIRS) — template lives at main/templates/staff_bug_detail.html
     return render(request, "staff_bug_detail.html", {"bug": bug})
+
+
+@staff_member_required
+@require_POST
+def staff_bug_update_status(request, bug_id: int):
+    """Update a bug's status (e.g., close or reopen)."""
+    new_status = request.POST.get("status", "").strip().lower()
+    next_url = request.POST.get("next")
+    allowed_statuses = {"open", "in_progress", "closed", "resolved"}
+
+    bug = BugReport.objects.filter(id=bug_id).first()
+    if not bug:
+        messages.error(request, "Bug not found.")
+        return redirect("staff_bug_list")
+
+    if new_status not in allowed_statuses:
+        messages.error(request, "Invalid status.")
+        redirect_target = next_url if next_url and next_url.startswith("/") else "staff_bug_detail"
+        return redirect(redirect_target, bug_id=bug_id) if redirect_target == "staff_bug_detail" else redirect(redirect_target)
+
+    bug.status = new_status
+    bug.save(update_fields=["status", "updated_at"])
+    messages.success(request, f"Bug #{bug.id} marked as {new_status}.")
+
+    if next_url and next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect("staff_bug_detail", bug_id=bug_id)
+
+
+@staff_member_required
+def staff_password_requests(request):
+    """List password reset requests for manual handling."""
+    ensure_password_request_table()
+    if request.method == "POST":
+        action = request.POST.get("action", "").strip().lower()
+        request_id = request.POST.get("request_id")
+        next_url = request.POST.get("next")
+
+        if action not in {"approve", "close"} or not request_id:
+            messages.error(request, "Invalid action for password request.")
+            return redirect("staff_password_requests")
+
+        row = query_one(
+            "SELECT id, email FROM password_reset_requests WHERE id = %s",
+            (request_id,),
+        )
+        if not row:
+            messages.error(request, "Password request not found.")
+            return redirect("staff_password_requests")
+
+        new_status = "approved" if action == "approve" else "closed"
+        execute(
+            "UPDATE password_reset_requests SET status = %s, handled_at = NOW() WHERE id = %s",
+            (new_status, request_id),
+        )
+        label = "approved" if action == "approve" else "closed"
+        messages.success(request, f"Request for {row.get('email')} {label}.")
+
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect("staff_password_requests")
+
+    rows = query_all(
+        """
+        SELECT id, email, reason, status, created_at, handled_at
+        FROM password_reset_requests
+        ORDER BY created_at DESC
+        """
+    )
+    return render(request, "staff_password_requests.html", {"requests": rows})
 
 
 # -------------------------

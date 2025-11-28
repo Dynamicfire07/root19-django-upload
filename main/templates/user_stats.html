@@ -61,6 +61,13 @@
                         <div class="meta text-muted">Per attempt</div>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="stat-tile">
+                        <div class="label">🔥 Streak</div>
+                        <div class="value">{{ streak.current|default:0 }} days</div>
+                        <div class="meta text-muted">Best {{ streak.best|default:0 }} days (requires 5 solves/day)</div>
+                    </div>
+                </div>
             </div>
 
             <div class="row g-4 mt-1">
