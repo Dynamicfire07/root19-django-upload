@@ -9,6 +9,28 @@ from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import random
 import json
+import typing as _t
+
+SESSION_LABELS = {
+    "620": "Chemistry",
+    "625": "Physics",
+    "610": "Biology",
+}
+
+
+def label_session(code: str) -> str:
+    """Human-friendly label for session code."""
+    if not code:
+        return ""
+    normalized = code.lstrip("0") or code
+    return SESSION_LABELS.get(normalized, SESSION_LABELS.get(code, code))
+
+
+def display_session_code(code: str) -> str:
+    """Display session code with leading zero padding when numeric."""
+    if not code or not code.isdigit():
+        return code or ""
+    return code.zfill(4)
 
 from .db import (
     query_one,
@@ -120,11 +142,35 @@ def home(request):
     return render(request, 'home.html', {'total_questions': total_questions})
 
 
+def ensure_study_progress_table():
+    """Create study_progress table if it does not exist (idempotent)."""
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS study_progress (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            session_code VARCHAR(100) NOT NULL,
+            subtopic VARCHAR(255) NOT NULL,
+            completed BOOLEAN DEFAULT FALSE,
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(user_id, session_code, subtopic)
+        );
+        """
+    )
+
+
 def question_bank(request):
     """Render the initial page with session codes."""
     rows = query_all("SELECT DISTINCT session_code FROM questions")
-    session_codes = [r['session_code'] for r in rows]
-    return render(request, 'question_bank.html', {'session_codes': session_codes})
+    session_options = [
+        {
+            "code": r['session_code'],
+            "label": label_session(r['session_code']),
+            "display": display_session_code(r['session_code']),
+        }
+        for r in rows
+    ]
+    return render(request, 'question_bank.html', {'session_options': session_options})
 
 
 def get_subtopics(request):
@@ -339,6 +385,114 @@ def user_stats(request):
         "saved": saved,
     }
     return render(request, "user_stats.html", context)
+
+
+def progress_tracker(request):
+    """Allow users to track subtopic completion per session."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        messages.info(request, "Please log in to track your progress.")
+        return redirect("login")
+
+    ensure_study_progress_table()
+
+    session_rows = query_all(
+        "SELECT DISTINCT session_code FROM questions ORDER BY session_code"
+    )
+    session_options = [
+        {
+            "code": row.get("session_code"),
+            "label": label_session(row.get("session_code")),
+            "display": display_session_code(row.get("session_code")),
+        }
+        for row in session_rows
+    ]
+    session_codes = [opt["code"] for opt in session_options]
+    selected_session = request.GET.get("session") or (session_codes[0] if session_codes else None)
+
+    subtopics = []
+    if selected_session:
+        subtopics = query_all(
+            """
+            SELECT DISTINCT subtopic
+            FROM questions
+            WHERE session_code = %s
+            ORDER BY subtopic
+            """,
+            (selected_session,),
+        )
+
+    existing = {}
+    if selected_session:
+        for row in query_all(
+            """
+            SELECT subtopic, completed
+            FROM study_progress
+            WHERE user_id = %s AND session_code = %s
+            """,
+            (user_id, selected_session),
+        ):
+            existing[row.get("subtopic")] = row.get("completed", False)
+
+    checklist = []
+    for row in subtopics:
+        label = row.get("subtopic")
+        checklist.append(
+            {
+                "subtopic": label,
+                "completed": existing.get(label, False),
+            }
+        )
+
+    return render(
+        request,
+        "progress.html",
+        {
+            "sessions": session_options,
+            "selected_session": selected_session,
+            "checklist": checklist,
+            "selected_label": label_session(selected_session) if selected_session else None,
+            "selected_display": display_session_code(selected_session) if selected_session else None,
+        },
+    )
+
+
+@require_POST
+def save_progress(request):
+    """Persist checklist state for a session/subtopic list."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    ensure_study_progress_table()
+
+    try:
+        payload: _t.Dict[str, _t.Any] = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    session_code = payload.get("session_code")
+    items = payload.get("items", [])
+
+    if not session_code or not isinstance(items, list):
+        return JsonResponse({"error": "Missing session_code or items"}, status=400)
+
+    for item in items:
+        subtopic = (item or {}).get("subtopic")
+        completed = bool((item or {}).get("completed"))
+        if not subtopic:
+            continue
+        execute(
+            """
+            INSERT INTO study_progress (user_id, session_code, subtopic, completed, updated_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            ON CONFLICT (user_id, session_code, subtopic)
+            DO UPDATE SET completed = EXCLUDED.completed, updated_at = NOW()
+            """,
+            (user_id, session_code, subtopic, completed),
+        )
+
+    return JsonResponse({"status": "ok"})
 
 
 def saved_questions(request):

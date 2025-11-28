@@ -42,11 +42,11 @@
         <div class="qb-card">
             <form id="filter-form" class="row g-4">
                 <div class="col-md-6">
-                    <label for="session_code" class="form-label fw-semibold">Session Code</label>
+                    <label for="session_code" class="form-label fw-semibold">Session</label>
                     <select id="session_code" class="form-select">
-                        <option value="" disabled selected>Select a session code</option>
-                        {% for code in session_codes %}
-                        <option value="{{ code }}">{{ code }}</option>
+                        <option value="" disabled selected>Select a session</option>
+                        {% for opt in session_options %}
+                        <option value="{{ opt.code }}">{{ opt.label }} ({{ opt.display }})</option>
                         {% endfor %}
                     </select>
                 </div>
