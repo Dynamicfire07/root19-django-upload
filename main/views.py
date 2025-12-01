@@ -506,14 +506,18 @@ def leaderboard(request):
 
     leaderboard_rows = []
     for idx, row in enumerate(rows, start=1):
+        solved_val = row.get("solved_count", 0) or 0
+        correct_val = row.get("correct_count", 0) or 0
+        incorrect_val = max(solved_val - correct_val, 0)
         leaderboard_rows.append(
             {
                 "rank": idx,
                 "user_id": row.get("user_id"),
                 "name": row.get("display_name") or row.get("email") or "Anonymous",
                 "email": row.get("email"),
-                "correct": row.get("correct_count", 0) or 0,
-                "solved": row.get("solved_count", 0) or 0,
+                "correct": correct_val,
+                "incorrect": incorrect_val,
+                "solved": solved_val,
                 "attempts": row.get("attempts", 0) or 0,
                 "accuracy": (
                     round(

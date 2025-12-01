@@ -217,6 +217,7 @@
                                         <th scope="col">Rank</th>
                                         <th scope="col">User</th>
                                         <th scope="col">Solved</th>
+                                        <th scope="col">Incorrect</th>
                                         <th scope="col">Correct</th>
                                     </tr>
                                 </thead>
@@ -226,6 +227,7 @@
                                         <td>#{{ forloop.counter }}</td>
                                         <td>{{ row.name }}</td>
                                         <td>{{ row.solved }}</td>
+                                        <td>{{ row.incorrect }}</td>
                                         <td>{{ row.correct }}</td>
                                     </tr>
                                     {% endfor %}
