@@ -355,6 +355,7 @@ def user_stats(request):
     attempts = totals.get("attempts", 0) or 0
     solved_count = solved.get("solved", 0) or 0
     correct_count = correct.get("correct", 0) or 0
+    incorrect_count = max(solved_count - correct_count, 0)
     accuracy = round((correct_count / solved_count) * 100, 1) if solved_count else 0.0
 
     avg_time_val = avg_time_row.get("avg_time")
@@ -467,6 +468,7 @@ def user_stats(request):
             "attempts": attempts,
             "solved": solved_count,
             "correct": correct_count,
+            "incorrect": incorrect_count,
             "accuracy": accuracy,
             "bookmarked": bookmarked.get("bookmarked", 0) or 0,
             "starred": starred.get("starred", 0) or 0,
@@ -718,6 +720,15 @@ def update_activity(request):
             (now, user_id, question_id),
         )
     elif action == "answer":
+        # Lock in the first submitted answer to prevent correcting accuracy by retrying
+        if activity.get("solved"):
+            return JsonResponse(
+                {
+                    "status": "ignored",
+                    "already_solved": True,
+                    "correct": bool(activity.get("correct")),
+                }
+            )
         correct = bool(data.get("correct", False))
         time_took = None
         started = activity.get("time_started")

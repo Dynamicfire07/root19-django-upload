@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -302,7 +303,11 @@
                                             <div class="text-muted small">Avg view depth: {{ a.times_viewed }}</div>
                                         </td>
                                         <td class="text-muted small">
-                                            {% if a.time_started %}{{ a.time_started|date:"M j, Y • H:i" }}{% else %}Not started{% endif %}
+                                            {% if a.time_started %}
+                                                {{ a.time_started|timezone:"Asia/Kolkata"|date:"M j, Y • H:i" }} IST
+                                            {% else %}
+                                                Not started
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% empty %}

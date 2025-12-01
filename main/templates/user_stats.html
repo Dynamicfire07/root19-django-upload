@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +25,13 @@
                     <div class="tiny-dot"></div>
                     <div>
                         <div class="label">Last sync</div>
-                        <div class="value">{{ recent.0.time_started|default:"Just now" }}</div>
+                        <div class="value">
+                            {% if recent and recent.0.time_started %}
+                                {{ recent.0.time_started|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST
+                            {% else %}
+                                Just now
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -39,9 +46,9 @@
                 </div>
                 <div class="col-md-3">
                     <div class="stat-tile">
-                        <div class="label">Solved</div>
-                        <div class="value">{{ stats.solved|default:0 }}</div>
-                        <div class="meta text-success">+ keep pushing</div>
+                        <div class="label">Solved / Incorrect</div>
+                        <div class="value">{{ stats.solved|default:0 }} / {{ stats.incorrect|default:0 }}</div>
+                        <div class="meta text-success">Attempts marked solved</div>
                     </div>
                 </div>
                 <div class="col-md-3">

@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,7 +37,7 @@
                         </td>
                         <td><span class="badge severity-{{ bug.severity }}">{{ bug.severity|title }}</span></td>
                         <td>{{ bug.status|replace:"_"," "|title }}</td>
-                        <td>{{ bug.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ bug.created_at|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST</td>
                         <td class="text-end">
                             <form method="post" action="/staff/bugs/{{ bug.id }}/status/" class="d-inline">
                                 {% csrf_token %}

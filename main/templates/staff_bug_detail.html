@@ -1,4 +1,5 @@
 {% load static %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,8 +83,8 @@
             {% endif %}
 
             <div class="mt-3 small text-muted">
-              <div>Reported: {{ bug.created_at|date:"Y-m-d H:i" }}</div>
-              <div>Updated: {{ bug.updated_at|date:"Y-m-d H:i" }}</div>
+              <div>Reported: {{ bug.created_at|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST</div>
+              <div>Updated: {{ bug.updated_at|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST</div>
             </div>
           </div>
         </div>
