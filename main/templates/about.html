@@ -10,6 +10,47 @@
     <style>
         :root { --r19-primary:#0d6efd; --r19-accent:#1e90ff; --r19-ink:#212529; --r19-muted:#6c757d; }
 
+        /* Champion theme rewires the page palette */
+        body.champion-mode, body.champion-theme {
+          --hero-bg: linear-gradient(135deg, var(--r19-primary) 0%, var(--r19-accent) 100%);
+          --panel-bg: #fff;
+          --panel-border: #e9ecef;
+          --panel-muted: #6c757d;
+          --accent-1: var(--r19-primary);
+          --accent-2: var(--r19-accent);
+          transition: background-color .4s ease, color .4s ease;
+        }
+        body.champion-mode .hero, body.champion-theme .hero { background: var(--hero-bg); }
+        body.champion-mode .site-meta, body.champion-theme .site-meta { background: var(--panel-bg); border-color: var(--panel-border); }
+        body.champion-mode .feature-card, body.champion-theme .feature-card { border-color: var(--panel-border); box-shadow: 0 .25rem .75rem rgba(0,0,0,.06); }
+        body.champion-mode .feature-card .text-primary, body.champion-theme .feature-card .text-primary { color: var(--accent-1)!important; }
+        body.champion-mode .section-head::after, body.champion-theme .section-head::after { background: linear-gradient(90deg, var(--accent-1), var(--accent-2)); }
+
+        body.champion-mode[data-champion-theme="gold"], body.champion-theme[data-champion-theme="gold"] {
+          --hero-bg: linear-gradient(135deg, #ffe08a 0%, #f6b93b 100%);
+          --panel-bg: #fff9ec;
+          --panel-border: #f0d8a8;
+          --panel-muted: #7b5a12;
+          --accent-1: #c27800;
+          --accent-2: #f6b93b;
+        }
+        body.champion-mode[data-champion-theme="emerald"], body.champion-theme[data-champion-theme="emerald"] {
+          --hero-bg: linear-gradient(135deg, #a3f7c0 0%, #4caf7a 100%);
+          --panel-bg: #f3fff8;
+          --panel-border: #b9e6d1;
+          --panel-muted: #1f5c3f;
+          --accent-1: #1f8f5c;
+          --accent-2: #4caf7a;
+        }
+        body.champion-mode[data-champion-theme="sapphire"], body.champion-theme[data-champion-theme="sapphire"] {
+          --hero-bg: linear-gradient(135deg, #b8ccff 0%, #4f82f6 100%);
+          --panel-bg: #f2f6ff;
+          --panel-border: #c9d8ff;
+          --panel-muted: #17356f;
+          --accent-1: #2f5ecf;
+          --accent-2: #4f82f6;
+        }
+
         /* Hero */
         .hero {
             position: relative;
@@ -53,8 +94,8 @@
 
         /* Section wrapper */
         .site-meta {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
+            background: var(--panel-bg, #f8f9fa);
+            border: 1px solid var(--panel-border, #e9ecef);
             border-radius: .75rem;
         }
 
@@ -90,6 +131,109 @@
           background: rgba(13,110,253,.25); animation: ripple .6s linear; pointer-events:none;
         }
         @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+        /* Champion spotlight with themeable tokens */
+        .champion-card {
+          --champ-bg: radial-gradient(circle at 20% 20%, #ffefc7 0%, #f5d37a 42%, #f0b84a 100%);
+          --champ-text: #3b2a0c;
+          --champ-pill-bg: rgba(255,255,255,.25);
+          --champ-pill-border: rgba(255,255,255,.45);
+          --champ-ring: rgba(255,255,255,.45);
+          --champ-ring-2: rgba(255,255,255,.28);
+          --champ-stat-bg: rgba(255,255,255,.3);
+          --champ-stat-border: rgba(255,255,255,.36);
+          --champ-stat-label: #7b5a12;
+          --champ-shadow: 0 .9rem 2.4rem rgba(240, 184, 74, .45);
+          position: relative; overflow: hidden;
+          color: var(--champ-text);
+          background: var(--champ-bg);
+          border-radius: 1rem;
+          box-shadow: var(--champ-shadow);
+          border: 1px solid rgba(255, 255, 255, .35);
+        }
+        .champion-card::after {
+          content:""; position:absolute; width:280px; height:280px; right:-120px; top:-160px;
+          background: radial-gradient(circle, rgba(255,255,255,.65), transparent 60%);
+          filter: blur(1px); opacity:.55; pointer-events:none;
+        }
+        .champion-pill {
+          display:inline-flex; align-items:center; gap:.35rem;
+          padding:.45rem .9rem; border-radius:999px;
+          background: var(--champ-pill-bg);
+          border:1px solid var(--champ-pill-border);
+          color: var(--champ-text); font-weight:700; letter-spacing:.02em; font-size:.95rem;
+          box-shadow: 0 .25rem .8rem rgba(255,255,255,.35);
+        }
+        .champion-stats .stat-box {
+          padding:.85rem 1rem; border-radius:.85rem;
+          border:1px solid var(--champ-stat-border);
+          background: var(--champ-stat-bg);
+          min-width:150px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
+        }
+        .champion-stats .label { text-transform: uppercase; font-size:.75rem; letter-spacing:.08em; color:var(--champ-stat-label); font-weight:700; }
+        .champion-card.gold-off {
+          --champ-bg: linear-gradient(135deg, #f8f9fa, #e9ecef);
+          --champ-text:#212529;
+          --champ-pill-bg: rgba(255,255,255,.9);
+          --champ-pill-border: rgba(0,0,0,.08);
+          --champ-ring: rgba(13,110,253,.25);
+          --champ-ring-2: rgba(13,110,253,.15);
+          --champ-stat-bg: rgba(255,255,255,.9);
+          --champ-stat-border: rgba(0,0,0,.08);
+          --champ-stat-label: #495057;
+          --champ-shadow: 0 .65rem 1.6rem rgba(0,0,0,.12);
+          border-color: rgba(0,0,0,.06);
+        }
+
+        /* Theme swatches */
+        .theme-palette { gap:.5rem; }
+        .theme-swatch {
+          width:38px; height:38px; border-radius:10px; border:1px solid rgba(0,0,0,.08);
+          cursor:pointer; position:relative; overflow:hidden;
+          box-shadow: 0 .35rem 1rem rgba(0,0,0,.12);
+        }
+        .theme-swatch input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+        .theme-swatch .inner { position:absolute; inset:0; }
+        .theme-swatch.active { outline: 2px solid #212529; outline-offset:3px; }
+
+        .champion-card.theme-gold {
+          --champ-bg: radial-gradient(circle at 20% 20%, #ffefc7 0%, #f5d37a 42%, #f0b84a 100%);
+          --champ-text: #3b2a0c;
+          --champ-pill-bg: rgba(255,255,255,.25);
+          --champ-pill-border: rgba(255,255,255,.45);
+          --champ-ring: rgba(255,255,255,.45);
+          --champ-ring-2: rgba(255,255,255,.28);
+          --champ-stat-bg: rgba(255,255,255,.3);
+          --champ-stat-border: rgba(255,255,255,.36);
+          --champ-stat-label: #7b5a12;
+          --champ-shadow: 0 .9rem 2.4rem rgba(240, 184, 74, .45);
+        }
+        .champion-card.theme-emerald {
+          --champ-bg: radial-gradient(circle at 20% 20%, #e0ffe8 0%, #9ae6c3 40%, #4caf7a 100%);
+          --champ-text: #123826;
+          --champ-pill-bg: rgba(255,255,255,.32);
+          --champ-pill-border: rgba(255,255,255,.55);
+          --champ-ring: rgba(255,255,255,.5);
+          --champ-ring-2: rgba(255,255,255,.28);
+          --champ-stat-bg: rgba(255,255,255,.34);
+          --champ-stat-border: rgba(255,255,255,.42);
+          --champ-stat-label: #1f5c3f;
+          --champ-shadow: 0 .9rem 2.4rem rgba(76, 175, 122, .45);
+        }
+        .champion-card.theme-sapphire {
+          --champ-bg: radial-gradient(circle at 20% 20%, #dfeaff 0%, #9abafc 38%, #4f82f6 100%);
+          --champ-text: #0f234f;
+          --champ-pill-bg: rgba(255,255,255,.3);
+          --champ-pill-border: rgba(255,255,255,.5);
+          --champ-ring: rgba(255,255,255,.55);
+          --champ-ring-2: rgba(255,255,255,.3);
+          --champ-stat-bg: rgba(255,255,255,.34);
+          --champ-stat-border: rgba(255,255,255,.42);
+          --champ-stat-label: #17356f;
+          --champ-shadow: 0 .9rem 2.4rem rgba(79, 130, 246, .42);
+        }
+        .gold-toggle { gap:.5rem; }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -101,7 +245,7 @@
       });
     </script>
   </head>
-  <body>
+  <body class="champion-mode" data-champion-theme="{{ top_champion.theme|default:'gold' }}" data-champion-enabled="on">
     {% include 'navbar.html' %}
     <main class="container my-4">
       <div class="p-4 p-md-5 hero mb-4">
@@ -115,6 +259,66 @@
           </div>
         </div>
       </div>
+
+      <section class="mb-5">
+        <div class="champion-card theme-gold p-4 p-lg-5">
+          <div class="d-flex flex-column flex-lg-row align-items-center align-items-lg-start gap-4">
+            <div class="flex-grow-1">
+              <div class="champion-pill mb-3"><i class="bi bi-stars"></i> Top Champion</div>
+              <h2 class="h3 fw-bold mb-1" id="championName">{{ top_champion.name|default:"Top Solver" }}</h2>
+              <p class="mb-3 lead">{{ top_champion.quote|default:"Owns the podium this week with precision and speed." }}</p>
+              <div class="d-flex flex-wrap gap-3 champion-stats">
+                <div class="stat-box">
+                  <div class="label">Accuracy</div>
+                  <div class="fs-4 fw-bold">{{ top_champion.accuracy|default:"98" }}%</div>
+                </div>
+                <div class="stat-box">
+                  <div class="label">Solved</div>
+                  <div class="fs-4 fw-bold">{{ top_champion.solved|default:"124" }}</div>
+                </div>
+                <div class="stat-box">
+                  <div class="label">Streak</div>
+                  <div class="fs-4 fw-bold">{{ top_champion.streak|default:"12" }} days</div>
+                </div>
+              </div>
+              <div class="alert alert-warning mt-3 d-flex flex-column flex-md-row align-items-md-center gap-2" id="championAccess"
+                   data-champion-name="{{ top_champion.name|default:'Top Solver' }}"
+                   data-champion-api="{{ champion_api_url|default:'' }}">
+                <div class="fw-semibold"><i class="bi bi-trophy-fill me-2"></i>Theme access holder:</div>
+                <div class="flex-grow-1">
+                  <span class="fw-bold" id="championAccessName">{{ top_champion.name|default:"Top Solver" }}</span>
+                  <span class="text-muted" id="championAccessWeek"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-center text-lg-end">
+              <div class="d-flex flex-column align-items-center align-items-lg-end gap-2">
+                <div class="d-flex align-items-center gold-toggle justify-content-center justify-content-lg-end">
+                  <label class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="goldToggle" checked>
+                    <span class="form-check-label fw-semibold">Gold Mode</span>
+                  </label>
+                </div>
+                <div class="d-flex theme-palette">
+                  <label class="theme-swatch active" data-theme="gold">
+                    <span class="inner" style="background: radial-gradient(circle at 20% 20%, #ffefc7 0%, #f5d37a 42%, #f0b84a 100%);"></span>
+                    <input type="radio" name="theme-choice" value="gold" checked>
+                  </label>
+                  <label class="theme-swatch" data-theme="emerald">
+                    <span class="inner" style="background: radial-gradient(circle at 20% 20%, #e0ffe8 0%, #9ae6c3 40%, #4caf7a 100%);"></span>
+                    <input type="radio" name="theme-choice" value="emerald">
+                  </label>
+                  <label class="theme-swatch" data-theme="sapphire">
+                    <span class="inner" style="background: radial-gradient(circle at 20% 20%, #dfeaff 0%, #9abafc 38%, #4f82f6 100%);"></span>
+                    <input type="radio" name="theme-choice" value="sapphire">
+                  </label>
+                </div>
+                <div class="text-muted small">Toggle glow; pick champion theme</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section class="mb-5">
         <h2 class="h4 mb-3 section-head">The Team</h2>
@@ -210,6 +414,105 @@
             setTimeout(() => ripple.remove(), 600);
           });
         });
+
+        // Gold mode toggle
+        const goldToggle = document.getElementById('goldToggle');
+        const championCard = document.querySelector('.champion-card');
+        const swatches = document.querySelectorAll('.theme-swatch');
+        const championAccess = document.getElementById('championAccess');
+        const setMode = (enabled) => {
+          document.body.classList.toggle('champion-mode', enabled);
+          document.body.dataset.championEnabled = enabled ? 'on' : 'off';
+          if (championCard) championCard.classList.toggle('gold-off', !enabled);
+          try { localStorage.setItem('championMode', enabled ? 'on' : 'off'); } catch (e) {}
+        };
+
+        const applyTheme = (theme) => {
+          if (!championCard) return;
+          championCard.classList.remove('theme-gold', 'theme-emerald', 'theme-sapphire');
+          championCard.classList.add(`theme-${theme}`);
+          document.body.dataset.championTheme = theme;
+          swatches.forEach(s => s.classList.toggle('active', s.dataset.theme === theme));
+          try { localStorage.setItem('championTheme', theme); } catch (e) {}
+        };
+
+        // Load saved theme
+        try {
+          const saved = localStorage.getItem('championTheme');
+          const savedMode = localStorage.getItem('championMode');
+          if (saved && ['gold','emerald','sapphire'].includes(saved)) applyTheme(saved);
+          if (savedMode === 'off') {
+            goldToggle.checked = false;
+            setMode(false);
+          } else {
+            setMode(true);
+          }
+        } catch (e) {}
+
+        // Theme picker
+        swatches.forEach(swatch => {
+          swatch.addEventListener('click', () => {
+            const chosen = swatch.dataset.theme;
+            applyTheme(chosen);
+          });
+        });
+
+        if (goldToggle && championCard) {
+          goldToggle.addEventListener('change', () => {
+            setMode(goldToggle.checked);
+          });
+        }
+
+        // Champion access banner: compute Sun-Sun range and optionally refresh via API weekly
+        if (championAccess) {
+          const nameEl = document.getElementById('championAccessName');
+          const weekEl = document.getElementById('championAccessWeek');
+          const apiUrl = championAccess.dataset.championApi;
+
+          const formatDate = (d) => d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+
+          const setWeekRange = () => {
+            const now = new Date();
+            const day = now.getDay(); // 0 = Sunday
+            const sunday = new Date(now);
+            sunday.setDate(now.getDate() - day);
+            sunday.setHours(0,0,0,0);
+            const nextSunday = new Date(sunday);
+            nextSunday.setDate(sunday.getDate() + 7);
+            weekEl.textContent = ` • Week: ${formatDate(sunday)} - ${formatDate(new Date(nextSunday.getTime() - 1))}`;
+            return nextSunday;
+          };
+
+          const applyChampionName = (nm) => {
+            if (nm && nameEl) nameEl.textContent = nm;
+          };
+
+          const refreshChampion = () => {
+            if (!apiUrl) return;
+            fetch(apiUrl)
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if (data && data.name) {
+                  applyChampionName(data.name);
+                  try { localStorage.setItem('championThemeName', data.name); } catch (e) {}
+                }
+              })
+              .catch(() => {});
+          };
+
+          // hydrate from storage if available
+          try {
+            const cached = localStorage.getItem('championThemeName');
+            if (cached) applyChampionName(cached);
+          } catch (e) {}
+
+          const nextSunday = setWeekRange();
+          const msToNextSunday = nextSunday.getTime() - Date.now() + 2000;
+          setTimeout(() => {
+            setWeekRange();
+            refreshChampion();
+          }, msToNextSunday);
+        }
       });
     </script>
   </body>

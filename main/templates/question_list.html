@@ -9,17 +9,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% include '_app_styles.html' %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f7f8fb; color: #0f172a; }
-        .ql-hero { background: linear-gradient(135deg, #0f172a, #0b5ed7); color: #fff; border-radius: 16px; padding: 1.5rem; box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.12); }
-        .ql-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); padding: 1.5rem; }
-        .form-control, .form-select { border-radius: 12px; padding: .85rem 1rem; border: 1px solid #e5e7eb; }
-        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px rgba(13,110,253,.18); border-color: rgba(13,110,253,.6); }
+        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: var(--bg, #f7f8fb); color: var(--text, #0f172a); }
+        .ql-hero { background: linear-gradient(135deg, #0f172a, var(--primary, #0b5ed7)); color: #fff; border-radius: 16px; padding: 1.5rem; box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.12); }
+        .ql-card { background: #fff; border: 1px solid var(--border, #e5e7eb); border-radius: 16px; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); padding: 1.5rem; }
+        .form-control, .form-select { border-radius: 12px; padding: .85rem 1rem; border: 1px solid var(--border, #e5e7eb); }
+        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px var(--ring, rgba(13,110,253,.18)); border-color: var(--primary, #0b5ed7); }
         table { width: 100%; }
-        .table thead { background: #0d6efd; color: #fff; }
+        .table thead { background: var(--primary, #0d6efd); color: #fff; }
         .table th, .table td { vertical-align: middle; }
-        .table img { border-radius: 8px; border: 1px solid #e5e7eb; }
+        .table img { border-radius: 8px; border: 1px solid var(--border, #e5e7eb); }
     </style>
 </head>
 <body>

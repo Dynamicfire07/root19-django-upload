@@ -9,15 +9,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% include '_app_styles.html' %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: #f7f8fb; color: #0f172a; }
-        .qb-hero { background: linear-gradient(135deg, #0f172a, #0b5ed7); color: #fff; border-radius: 16px; padding: 2rem; box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.12); }
+        body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background: var(--bg, #f7f8fb); color: var(--text, #0f172a); }
+        .qb-hero { background: linear-gradient(135deg, #0f172a, var(--primary, #0b5ed7)); color: #fff; border-radius: 16px; padding: 2rem; box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.12); }
         .qb-hero h1 { font-weight: 800; }
-        .qb-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); padding: 1.5rem; }
+        .qb-card { background: #fff; border: 1px solid var(--border, #e5e7eb); border-radius: 16px; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); padding: 1.5rem; }
         .pill { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .8rem; border-radius: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); font-weight: 600; }
-        .form-control, .form-select { border-radius: 12px; padding: .85rem 1rem; border: 1px solid #e5e7eb; }
-        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px rgba(13,110,253,.18); border-color: rgba(13,110,253,.6); }
+        .form-control, .form-select { border-radius: 12px; padding: .85rem 1rem; border: 1px solid var(--border, #e5e7eb); }
+        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px var(--ring, rgba(13,110,253,.18)); border-color: var(--primary, #0b5ed7); }
         .btn-primary { border-radius: 12px; padding: .9rem 1rem; font-weight: 700; }
     </style>
 </head>
