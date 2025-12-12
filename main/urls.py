@@ -25,6 +25,7 @@ urlpatterns = [
     path('staff/user-activity/', views.user_activity_admin, name='user_activity_admin'),
     path('staff/reset-password/', views.staff_reset_password, name='staff_reset_password'),
     path('staff/password-requests/', views.staff_password_requests, name='staff_password_requests'),
+    path('staff/theme-access/', views.staff_theme_access, name='staff_theme_access'),
     path('report-bug/', views.report_bug, name='report_bug'),
     path('report-bug/thanks/', views.report_bug_thanks, name='report_bug_thanks'),
     path('staff/bugs/', views.staff_bug_list, name='staff_bug_list'),

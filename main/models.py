@@ -26,6 +26,7 @@ class User(models.Model):
     password = models.CharField(max_length=255)  # store hashes, not plaintext
     role = models.CharField(max_length=50)
     school = models.CharField(max_length=255)
+    champion_theme_access = models.BooleanField(default=False)
     
     class Meta:
         db_table = "users"

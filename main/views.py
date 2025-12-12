@@ -102,6 +102,7 @@ def register(request):
 def login_view(request):
     """Handle login using the users table."""
     if request.method == 'POST':
+        ensure_champion_access_field()
         email = request.POST['email']
         password = request.POST['password']
         remember_me = request.POST.get('remember_me') == 'on'
@@ -117,6 +118,9 @@ def login_view(request):
             else:
                 # Expire when browser closes
                 request.session.set_expiry(0)
+            request.session['champion_access'] = bool(user.get('champion_theme_access'))
+            if user.get('champion_theme_access'):
+                request.session['champion_name'] = user.get('name') or user.get('email')
 
             messages.success(request, f"Welcome back, {user['name']}!")
             return redirect('home')
@@ -208,7 +212,19 @@ def password_reset_request(request):
 
 def home(request):
     """Render the home page with the question count."""
+    champion = update_weekly_champion()
     total_questions = query_one("SELECT COUNT(*) AS cnt FROM questions")['cnt']
+
+    # Refresh session flags based on champion rotation
+    session_user_id = request.session.get("user_id")
+    if session_user_id:
+        if champion and session_user_id == champion.get("user_id"):
+            request.session["champion_access"] = True
+            request.session["champion_name"] = champion.get("name")
+        else:
+            request.session["champion_access"] = False
+            request.session.pop("champion_name", None)
+
     return render(request, 'home.html', {'total_questions': total_questions})
 
 
@@ -250,6 +266,57 @@ def ensure_password_request_table():
     execute(
         "ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS handled_at TIMESTAMPTZ;"
     )
+
+def ensure_champion_access_field():
+    """Ensure champion_theme_access exists on users."""
+    execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme_access BOOLEAN DEFAULT FALSE;"
+    )
+
+
+def update_weekly_champion():
+    """
+    Assign champion_theme_access to the top user by accuracy over the past 7 days.
+    Highest accuracy wins; ties break by solved count then user_id. Clears previous holder.
+    """
+    ensure_champion_access_field()
+
+    top = query_one(
+        """
+        SELECT ua.user_id,
+               SUM(CASE WHEN ua.correct THEN 1 ELSE 0 END) AS correct_count,
+               SUM(CASE WHEN ua.solved THEN 1 ELSE 0 END) AS solved_count
+        FROM user_activity ua
+        WHERE ua.time_started >= NOW() - INTERVAL '7 days'
+        GROUP BY ua.user_id
+        HAVING SUM(CASE WHEN ua.solved THEN 1 ELSE 0 END) > 0
+        ORDER BY
+          (SUM(CASE WHEN ua.correct THEN 1 ELSE 0 END)::float / NULLIF(SUM(CASE WHEN ua.solved THEN 1 ELSE 0 END),0)) DESC,
+          SUM(CASE WHEN ua.solved THEN 1 ELSE 0 END) DESC,
+          ua.user_id ASC
+        LIMIT 1;
+        """
+    )
+
+    # Clear previous holders
+    execute("UPDATE users SET champion_theme_access = FALSE")
+
+    if not top:
+        return None
+
+    winner_id = top.get("user_id")
+    execute(
+        "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
+        (winner_id,),
+    )
+
+    winner = query_one(
+        "SELECT user_id, name, email FROM users WHERE user_id = %s",
+        (winner_id,),
+    ) or {}
+
+    display_name = winner.get("name") or winner.get("email") or "Top Solver"
+    return {"user_id": winner_id, "name": display_name}
 
 
 def question_bank(request):
@@ -1151,6 +1218,35 @@ def staff_password_requests(request):
         """
     )
     return render(request, "staff_password_requests.html", {"requests": rows})
+
+
+@staff_member_required
+def staff_theme_access(request):
+    """Admin view to preview and toggle champion theme access."""
+    ensure_champion_access_field()
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        user_id = request.POST.get("user_id")
+        if action not in {"grant", "revoke"} or not user_id:
+            messages.error(request, "Invalid action.")
+            return redirect("staff_theme_access")
+        new_value = action == "grant"
+        execute(
+            "UPDATE users SET champion_theme_access = %s WHERE user_id = %s",
+            (new_value, user_id),
+        )
+        messages.success(request, f"Theme access {'granted' if new_value else 'revoked'} for {user_id}.")
+        return redirect("staff_theme_access")
+
+    users = query_all(
+        """
+        SELECT user_id, name, email, role, school, COALESCE(champion_theme_access, FALSE) AS champion_theme_access
+        FROM users
+        ORDER BY champion_theme_access DESC, name, email
+        """
+    )
+    return render(request, "staff_theme_access.html", {"users": users})
 
 
 # -------------------------

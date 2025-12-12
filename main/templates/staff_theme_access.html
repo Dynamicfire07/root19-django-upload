@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Champion Theme Access</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include '_app_styles.html' %}
+</head>
+<body class="stats-page">
+    {% include 'navbar.html' %}
+    <main class="py-4 py-md-5">
+        <div class="container">
+            <div class="bug-hero mb-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <div class="pill">Champion themes</div>
+                        <h1 class="mt-2 mb-1 fw-bold">Theme access roster</h1>
+                        <p class="mb-0 text-white-75">Preview who can use champion themes. Grant or revoke access for any user (top weekly accuracy wins automatically).</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>School</th>
+                                    <th>Access</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.user_id }}</td>
+                                        <td>{{ user.name|default:"—" }}</td>
+                                        <td>{{ user.email }}</td>
+                                        <td>{{ user.role|default:"—" }}</td>
+                                        <td class="text-muted small">{{ user.school|default:"—" }}</td>
+                                        <td>
+                                            {% if user.champion_theme_access %}
+                                                <span class="badge bg-success">Access</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No access</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="user_id" value="{{ user.user_id }}">
+                                                {% if user.champion_theme_access %}
+                                                    <input type="hidden" name="action" value="revoke">
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Revoke</button>
+                                                {% else %}
+                                                    <input type="hidden" name="action" value="grant">
+                                                    <button type="submit" class="btn btn-sm btn-primary">Grant</button>
+                                                {% endif %}
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No users found.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
