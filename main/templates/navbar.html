@@ -88,7 +88,7 @@
                 {% endif %}
             </ul>
             <ul class="navbar-nav ms-auto">
-                {% if request.user.is_staff %}
+                {% if request.user.is_staff or request.session.champion_access %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Theme
@@ -107,11 +107,6 @@
                             </div>
                         </li>
                     </ul>
-                </li>
-                {% endif %}
-                {% if request.session.champion_name %}
-                <li class="nav-item">
-                    <span class="nav-link disabled text-uppercase fw-semibold">Champion: {{ request.session.champion_name }}</span>
                 </li>
                 {% endif %}
                 {% if request.session.user_name %}
