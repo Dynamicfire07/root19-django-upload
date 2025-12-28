@@ -4,6 +4,8 @@ from . import views
 urlpatterns = [
     path('',views.home, name='home'),
     path('about/', views.about, name='about'),
+    path('duels/', views.duels_hub, name='duels_hub'),
+    path('duels/<int:duel_id>/', views.duel_play, name='duel_play'),
     path('terms/', views.terms, name='terms'),
     path('privacy/', views.privacy, name='privacy'),
     path('disclaimer/', views.disclaimer, name='disclaimer'),
@@ -31,4 +33,8 @@ urlpatterns = [
     path('staff/bugs/', views.staff_bug_list, name='staff_bug_list'),
     path('staff/bugs/<int:bug_id>/', views.staff_bug_detail, name='staff_bug_detail'),
     path('staff/bugs/<int:bug_id>/status/', views.staff_bug_update_status, name='staff_bug_update_status'),
+    path('api/duels/', views.api_create_duel, name='api_create_duel'),
+    path('api/duels/join/', views.api_join_duel, name='api_join_duel'),
+    path('api/duels/<int:duel_id>/', views.api_duel_status, name='api_duel_status'),
+    path('api/duels/<int:duel_id>/submit', views.api_duel_submit, name='api_duel_submit'),
 ]

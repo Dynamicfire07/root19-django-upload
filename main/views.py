@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
+from django.utils.crypto import get_random_string
 import random
 import secrets
 import string
@@ -272,6 +273,163 @@ def ensure_champion_access_field():
     execute(
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme_access BOOLEAN DEFAULT FALSE;"
     )
+
+# -------------------------
+# DUELS
+# -------------------------
+
+
+def ensure_duel_tables():
+    """Create duels table and indexes if missing (idempotent)."""
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS duels (
+            id SERIAL PRIMARY KEY,
+            code VARCHAR(12) UNIQUE NOT NULL,
+            creator_id VARCHAR(255) NOT NULL,
+            opponent_id VARCHAR(255),
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            syllabus_code VARCHAR(100),
+            question_ids JSONB NOT NULL,
+            time_limit_seconds INTEGER NOT NULL DEFAULT 180,
+            start_at TIMESTAMPTZ,
+            expires_at TIMESTAMPTZ,
+            pending_expires_at TIMESTAMPTZ,
+            winner VARCHAR(20),
+            creator_submitted BOOLEAN DEFAULT FALSE,
+            opponent_submitted BOOLEAN DEFAULT FALSE,
+            creator_answers JSONB,
+            opponent_answers JSONB,
+            creator_score JSONB,
+            opponent_score JSONB,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """
+    )
+    execute("CREATE INDEX IF NOT EXISTS idx_duels_code ON duels (code)")
+    execute("CREATE INDEX IF NOT EXISTS idx_duels_status ON duels (status)")
+    execute("CREATE INDEX IF NOT EXISTS idx_duels_expires ON duels (expires_at)")
+
+
+def _parse_json_field(val, fallback):
+    if val is None:
+        return fallback
+    if isinstance(val, (list, dict)):
+        return val
+    try:
+        return json.loads(val)
+    except Exception:
+        return fallback
+
+
+def _generate_duel_code() -> str:
+    return get_random_string(6, allowed_chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+
+
+def _pick_question_ids(limit: int, syllabus_code: _t.Optional[str] = None) -> _t.List[str]:
+    if syllabus_code:
+        rows = query_all(
+            "SELECT question_id FROM questions WHERE session_code = %s",
+            (syllabus_code,),
+        )
+    else:
+        rows = query_all("SELECT question_id FROM questions")
+    pool = [r["question_id"] for r in rows]
+    if not pool:
+        return []
+    if len(pool) <= limit:
+        random.shuffle(pool)
+        return pool
+    return random.sample(pool, limit)
+
+
+def _serialize_duel(row: dict) -> dict:
+    question_ids = _parse_json_field(row.get("question_ids"), [])
+    return {
+        "id": row.get("id"),
+        "code": row.get("code"),
+        "creator_id": row.get("creator_id"),
+        "opponent_id": row.get("opponent_id"),
+        "status": row.get("status"),
+        "syllabus_code": row.get("syllabus_code"),
+        "question_ids": question_ids,
+        "time_limit_seconds": row.get("time_limit_seconds"),
+        "start_at": row.get("start_at").isoformat() if row.get("start_at") else None,
+        "expires_at": row.get("expires_at").isoformat() if row.get("expires_at") else None,
+        "pending_expires_at": row.get("pending_expires_at").isoformat() if row.get("pending_expires_at") else None,
+        "winner": row.get("winner"),
+        "creator_submitted": bool(row.get("creator_submitted")),
+        "opponent_submitted": bool(row.get("opponent_submitted")),
+        "creator_score": _parse_json_field(row.get("creator_score"), {}),
+        "opponent_score": _parse_json_field(row.get("opponent_score"), {}),
+    }
+
+
+def _compute_winner(duel: dict, expired: bool = False) -> str:
+    creator_score = _parse_json_field(duel.get("creator_score"), {}) or {}
+    opponent_score = _parse_json_field(duel.get("opponent_score"), {}) or {}
+    c_correct = int(creator_score.get("correct", 0) or 0)
+    o_correct = int(opponent_score.get("correct", 0) or 0)
+    c_time = float(creator_score.get("time_taken_seconds", 0) or 0)
+    o_time = float(opponent_score.get("time_taken_seconds", 0) or 0)
+
+    if c_correct > o_correct:
+        return "creator"
+    if o_correct > c_correct:
+        return "opponent"
+    if c_correct == 0 and o_correct == 0 and expired:
+        # No valid submissions; treat as no winner.
+        return "none"
+    if c_correct == o_correct:
+        if c_time and o_time:
+            if c_time < o_time:
+                return "creator"
+            if o_time < c_time:
+                return "opponent"
+        return "draw"
+    return "draw"
+
+
+def _auto_finalize_if_needed(duel: dict) -> dict:
+    """Expire pending/active duels when timers elapse."""
+    now = datetime.now(timezone.utc)
+    status = duel.get("status")
+    duel_id = duel.get("id")
+
+    # Pending expiry
+    pending_expires_at = duel.get("pending_expires_at")
+    if pending_expires_at and status == "pending" and pending_expires_at <= now:
+        execute(
+            "UPDATE duels SET status = 'expired', winner = 'none', updated_at = NOW() WHERE id = %s",
+            (duel_id,),
+        )
+        return query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+
+    return duel
+
+
+def _evaluate_answers(question_ids: _t.List[str], answers: dict, time_taken_seconds: _t.Optional[float]) -> dict:
+    answers = answers or {}
+    rows = query_all(
+        "SELECT question_id, answer FROM questions WHERE question_id = ANY(%s)",
+        (question_ids or [],),
+    ) if question_ids else []
+    expected = {r["question_id"]: r.get("answer", "") for r in rows}
+
+    correct = 0
+    for qid in question_ids:
+        submitted = str(answers.get(qid, "") or "").strip().lower()
+        real_answer = str(expected.get(qid, "") or "").strip().lower()
+        if submitted and real_answer and submitted == real_answer:
+            correct += 1
+
+    return {
+        "total": len(question_ids),
+        "correct": correct,
+        "time_taken_seconds": float(time_taken_seconds or 0),
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def update_weekly_champion():
@@ -743,6 +901,80 @@ def about(request):
     return render(request, 'about.html')
 
 
+def duels_hub(request):
+    """Render the duel hub page with create/join forms."""
+    ensure_duel_tables()
+    session_rows = query_all("SELECT DISTINCT session_code FROM questions")
+    session_options = [
+        {
+            "code": r["session_code"],
+            "label": label_session(r["session_code"]),
+            "display": display_session_code(r["session_code"]),
+        }
+        for r in session_rows
+    ]
+    prefill_code = request.GET.get("code", "").strip()
+    context = {
+        "session_options": session_options,
+        "prefill_code": prefill_code,
+        "user_id": request.session.get("user_id"),
+    }
+    return render(request, "duels.html", context)
+
+
+def duel_play(request, duel_id: int):
+    """Display a duel session with the shared question set."""
+    ensure_duel_tables()
+    duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+    if not duel:
+        messages.error(request, "Duel not found.")
+        return redirect("duels_hub")
+
+    user_id = request.session.get("user_id")
+    if not user_id:
+        messages.info(request, "Log in to join or view this duel.")
+        return redirect("login")
+
+    if user_id not in [duel.get("creator_id"), duel.get("opponent_id")]:
+        messages.error(request, "You are not a participant in this duel.")
+        return redirect("duels_hub")
+
+    question_ids = _parse_json_field(duel.get("question_ids"), [])
+    questions = []
+    if question_ids:
+        rows = query_all(
+            """
+            SELECT question_id, extracted_text, session_code, subtopic, image_base64
+            FROM questions WHERE question_id = ANY(%s)
+            """,
+            (question_ids,),
+        )
+        # Preserve order based on question_ids
+        order = {qid: idx for idx, qid in enumerate(question_ids)}
+        rows.sort(key=lambda r: order.get(r["question_id"], 0))
+        questions = rows
+
+    serialized_duel = _serialize_duel(duel)
+    creator_name = None
+    opponent_name = None
+    if duel.get("creator_id"):
+        c = query_one("SELECT name, email FROM users WHERE user_id = %s", (duel.get("creator_id"),))
+        creator_name = c.get("name") or c.get("email") if c else None
+    if duel.get("opponent_id"):
+        o = query_one("SELECT name, email FROM users WHERE user_id = %s", (duel.get("opponent_id"),))
+        opponent_name = o.get("name") or o.get("email") if o else None
+    context = {
+        "duel": serialized_duel,
+        "duel_json": json.dumps(serialized_duel),
+        "questions": questions,
+        "questions_json": json.dumps(questions),
+        "user_id": user_id,
+        "creator_name": creator_name,
+        "opponent_name": opponent_name,
+    }
+    return render(request, "duel_detail.html", context)
+
+
 # -------------------------
 # API ENDPOINTS
 # -------------------------
@@ -756,6 +988,190 @@ def check_answer(request):
     is_correct = doc and doc.get('answer') == selected_answer
     return JsonResponse({'is_correct': is_correct})
 
+
+@csrf_exempt
+@require_POST
+def api_create_duel(request):
+    """Create a duel and return the party code."""
+    ensure_duel_tables()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to create a duel."}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = request.POST
+
+    syllabus_code = (payload.get("syllabus_code") or "").strip() or None
+    time_limit = 0  # time limits removed; use completion speed as tiebreak
+
+    question_count = payload.get("question_count") or payload.get("questions") or 5
+    try:
+        question_count = int(question_count)
+    except Exception:
+        question_count = 5
+    question_count = max(1, min(question_count, 50))
+
+    question_ids = _pick_question_ids(question_count, syllabus_code)
+    if not question_ids:
+        return JsonResponse({"error": "No questions available for that selection."}, status=400)
+
+    code = _generate_duel_code()
+    while query_one("SELECT 1 FROM duels WHERE code = %s", (code,)):
+        code = _generate_duel_code()
+
+    now = datetime.now(timezone.utc)
+    pending_expires_at = now + timedelta(minutes=15)
+
+    execute(
+        """
+        INSERT INTO duels (
+            code, creator_id, status, syllabus_code, question_ids,
+            time_limit_seconds, pending_expires_at, created_at, updated_at
+        ) VALUES (%s, %s, 'pending', %s, %s, %s, %s, NOW(), NOW())
+        """,
+        (code, user_id, syllabus_code, json.dumps(question_ids), time_limit, pending_expires_at),
+    )
+
+    duel = query_one("SELECT * FROM duels WHERE code = %s", (code,))
+    data = _serialize_duel(duel)
+    data["play_url"] = f"/duels/{duel.get('id')}/"
+    return JsonResponse(data)
+
+
+@csrf_exempt
+@require_POST
+def api_join_duel(request):
+    """Join a duel using the party code."""
+    ensure_duel_tables()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to join a duel."}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = request.POST
+
+    code = (payload.get("code") or "").strip().upper()
+    if not code:
+        return JsonResponse({"error": "Party code is required."}, status=400)
+
+    duel = query_one("SELECT * FROM duels WHERE code = %s", (code,))
+    if not duel:
+        return JsonResponse({"error": "Duel not found."}, status=404)
+
+    duel = _auto_finalize_if_needed(duel)
+    if duel.get("status") != "pending":
+        return JsonResponse({"error": f"Duel is {duel.get('status')}."}, status=400)
+
+    if duel.get("creator_id") == user_id:
+        return JsonResponse({"error": "You created this duel; share the code with someone else to join."}, status=400)
+
+    execute(
+        """
+        UPDATE duels
+        SET opponent_id = %s,
+            status = 'active',
+            start_at = NOW(),
+            updated_at = NOW()
+        WHERE id = %s
+        """,
+        (user_id, duel.get("id")),
+    )
+
+    duel = query_one("SELECT * FROM duels WHERE id = %s", (duel.get("id"),))
+    data = _serialize_duel(duel)
+    data["play_url"] = f"/duels/{duel.get('id')}/"
+    return JsonResponse(data)
+
+
+def api_duel_status(request, duel_id: int):
+    """Return duel status for polling."""
+    ensure_duel_tables()
+    duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+    if not duel:
+        return JsonResponse({"error": "Duel not found."}, status=404)
+    duel = _auto_finalize_if_needed(duel)
+    return JsonResponse(_serialize_duel(duel))
+
+
+@csrf_exempt
+@require_POST
+def api_duel_submit(request, duel_id: int):
+    """Submit answers for a duel; locks once submitted or expired."""
+    ensure_duel_tables()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to submit."}, status=401)
+
+    duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+    if not duel:
+        return JsonResponse({"error": "Duel not found."}, status=404)
+
+    duel = _auto_finalize_if_needed(duel)
+    if duel.get("status") == "pending":
+        return JsonResponse({"error": "Duel has not started yet."}, status=400)
+    if duel.get("status") in ("completed", "expired"):
+        return JsonResponse({"error": f"Duel is {duel.get('status')}."}, status=400)
+
+    role = None
+    flag_field = None
+    answers_field = None
+    score_field = None
+    if duel.get("creator_id") == user_id:
+        role = "creator"
+        flag_field = "creator_submitted"
+        answers_field = "creator_answers"
+        score_field = "creator_score"
+    elif duel.get("opponent_id") == user_id:
+        role = "opponent"
+        flag_field = "opponent_submitted"
+        answers_field = "opponent_answers"
+        score_field = "opponent_score"
+    else:
+        return JsonResponse({"error": "You are not a participant in this duel."}, status=403)
+
+    if duel.get(flag_field):
+        return JsonResponse({"error": "Already submitted."}, status=400)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    answers = payload.get("answers") or {}
+    time_taken_seconds = payload.get("time_taken_seconds") or payload.get("time_taken") or 0
+
+    question_ids = _parse_json_field(duel.get("question_ids"), [])
+    score = _evaluate_answers(question_ids, answers, time_taken_seconds)
+
+    execute(
+        f"""
+        UPDATE duels
+        SET {flag_field} = TRUE,
+            {answers_field} = %s,
+            {score_field} = %s,
+            updated_at = NOW()
+        WHERE id = %s
+        """,
+        (json.dumps(answers), json.dumps(score), duel_id),
+    )
+
+    duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+
+    if duel.get("creator_submitted") and duel.get("opponent_submitted"):
+        winner = _compute_winner(duel, expired=False)
+        execute(
+            "UPDATE duels SET status = 'completed', winner = %s, updated_at = NOW() WHERE id = %s",
+            (winner, duel_id),
+        )
+        duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
+    else:
+        duel = _auto_finalize_if_needed(duel)
+
+    return JsonResponse(_serialize_duel(duel))
 
 @csrf_exempt
 @require_POST
