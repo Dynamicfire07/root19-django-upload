@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.cache import cache
 from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import random
@@ -47,9 +48,20 @@ from .db import (
     get_next_user_id,
     get_or_create_activity,
 )
-from .streaks import compute_streak
+from .streaks import compute_streak, invalidate_streak_cache
 from .models import BugReport
 
+CHAMPION_CACHE_KEY = "weekly_champion"
+CHAMPION_CACHE_TTL = 1800  # 30 minutes
+TOTAL_QUESTIONS_CACHE_KEY = "home_total_questions"
+TOTAL_QUESTIONS_TTL = 300  # 5 minutes
+SESSION_OPTIONS_CACHE_KEY = "session_options"
+SESSION_OPTIONS_TTL = 600  # 10 minutes
+SUBTOPIC_CACHE_TTL = 600
+
+_study_progress_ready = False
+_password_request_ready = False
+_CACHE_MISS = object()
 
 # -------------------------
 # AUTHENTICATION
@@ -213,7 +225,7 @@ def password_reset_request(request):
 def home(request):
     """Render the home page with the question count."""
     champion = update_weekly_champion()
-    total_questions = query_one("SELECT COUNT(*) AS cnt FROM questions")['cnt']
+    total_questions = get_total_questions_count()
 
     # Refresh session flags based on champion rotation
     session_user_id = request.session.get("user_id")
@@ -230,6 +242,9 @@ def home(request):
 
 def ensure_study_progress_table():
     """Create study_progress table if it does not exist (idempotent)."""
+    global _study_progress_ready
+    if _study_progress_ready:
+        return
     execute(
         """
         CREATE TABLE IF NOT EXISTS study_progress (
@@ -243,10 +258,14 @@ def ensure_study_progress_table():
         );
         """
     )
+    _study_progress_ready = True
 
 
 def ensure_password_request_table():
     """Create password_reset_requests table if missing."""
+    global _password_request_ready
+    if _password_request_ready:
+        return
     execute(
         """
         CREATE TABLE IF NOT EXISTS password_reset_requests (
@@ -266,6 +285,7 @@ def ensure_password_request_table():
     execute(
         "ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS handled_at TIMESTAMPTZ;"
     )
+    _password_request_ready = True
 
 def ensure_champion_access_field():
     """Ensure champion_theme_access exists on users."""
@@ -274,11 +294,44 @@ def ensure_champion_access_field():
     )
 
 
+def get_total_questions_count() -> int:
+    """Cache the total question count to avoid counting on every request."""
+    cached = cache.get(TOTAL_QUESTIONS_CACHE_KEY)
+    if cached is not None:
+        return cached
+    row = query_one("SELECT COUNT(*) AS cnt FROM questions") or {"cnt": 0}
+    total = row.get("cnt", 0) or 0
+    cache.set(TOTAL_QUESTIONS_CACHE_KEY, total, TOTAL_QUESTIONS_TTL)
+    return total
+
+
+def get_session_options() -> list:
+    """Return cached list of session codes with labels for dropdowns."""
+    cached = cache.get(SESSION_OPTIONS_CACHE_KEY, _CACHE_MISS)
+    if cached is not _CACHE_MISS:
+        return cached
+    rows = query_all("SELECT DISTINCT session_code FROM questions ORDER BY session_code")
+    session_options = [
+        {
+            "code": r['session_code'],
+            "label": label_session(r['session_code']),
+            "display": display_session_code(r['session_code']),
+        }
+        for r in rows
+    ]
+    cache.set(SESSION_OPTIONS_CACHE_KEY, session_options, SESSION_OPTIONS_TTL)
+    return session_options
+
+
 def update_weekly_champion():
     """
     Assign champion_theme_access to the top user by accuracy over the past 7 days.
     Highest accuracy wins; ties break by solved count then user_id. Clears previous holder.
     """
+    cached = cache.get(CHAMPION_CACHE_KEY, _CACHE_MISS)
+    if cached is not _CACHE_MISS:
+        return cached
+
     ensure_champion_access_field()
 
     top = query_one(
@@ -298,17 +351,31 @@ def update_weekly_champion():
         """
     )
 
-    # Clear previous holders
-    execute("UPDATE users SET champion_theme_access = FALSE")
+    current_holders = {
+        row.get("user_id")
+        for row in query_all("SELECT user_id FROM users WHERE champion_theme_access = TRUE")
+        if row.get("user_id")
+    }
 
     if not top:
+        if current_holders:
+            execute("UPDATE users SET champion_theme_access = FALSE WHERE champion_theme_access = TRUE")
+        cache.set(CHAMPION_CACHE_KEY, None, CHAMPION_CACHE_TTL)
         return None
 
     winner_id = top.get("user_id")
-    execute(
-        "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
-        (winner_id,),
-    )
+
+    stale_holders = [uid for uid in current_holders if uid != winner_id]
+    if stale_holders:
+        execute(
+            "UPDATE users SET champion_theme_access = FALSE WHERE champion_theme_access = TRUE AND user_id <> %s",
+            (winner_id,),
+        )
+    if winner_id not in current_holders:
+        execute(
+            "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
+            (winner_id,),
+        )
 
     winner = query_one(
         "SELECT user_id, name, email FROM users WHERE user_id = %s",
@@ -316,20 +383,14 @@ def update_weekly_champion():
     ) or {}
 
     display_name = winner.get("name") or winner.get("email") or "Top Solver"
-    return {"user_id": winner_id, "name": display_name}
+    result = {"user_id": winner_id, "name": display_name}
+    cache.set(CHAMPION_CACHE_KEY, result, CHAMPION_CACHE_TTL)
+    return result
 
 
 def question_bank(request):
     """Render the initial page with session codes."""
-    rows = query_all("SELECT DISTINCT session_code FROM questions")
-    session_options = [
-        {
-            "code": r['session_code'],
-            "label": label_session(r['session_code']),
-            "display": display_session_code(r['session_code']),
-        }
-        for r in rows
-    ]
+    session_options = get_session_options()
     return render(request, 'question_bank.html', {'session_options': session_options})
 
 
@@ -339,11 +400,15 @@ def get_subtopics(request):
     if not session_code:
         return JsonResponse({'error': 'Session code is required'}, status=400)
 
-    rows = query_all(
-        "SELECT DISTINCT subtopic FROM questions WHERE session_code = %s",
-        (session_code,),
-    )
-    subtopics = [r['subtopic'] for r in rows]
+    cache_key = f"subtopics:{session_code}"
+    subtopics = cache.get(cache_key)
+    if subtopics is None:
+        rows = query_all(
+            "SELECT DISTINCT subtopic FROM questions WHERE session_code = %s",
+            (session_code,),
+        )
+        subtopics = [r['subtopic'] for r in rows]
+        cache.set(cache_key, subtopics, SUBTOPIC_CACHE_TTL)
     if not subtopics:
         return JsonResponse({'error': 'No subtopics found for this session code'}, status=404)
 
@@ -394,38 +459,27 @@ def user_stats(request):
         (user_id,),
     ) or {}
 
-    totals = query_one(
-        "SELECT COUNT(*) AS attempts FROM user_activity WHERE user_id = %s",
+    stats_row = query_one(
+        """
+        SELECT COUNT(*) AS attempts,
+               COUNT(*) FILTER (WHERE solved = TRUE) AS solved,
+               COUNT(*) FILTER (WHERE correct = TRUE) AS correct,
+               COUNT(*) FILTER (WHERE bookmarked = TRUE) AS bookmarked,
+               COUNT(*) FILTER (WHERE starred = TRUE) AS starred,
+               AVG(time_took) AS avg_time
+        FROM user_activity
+        WHERE user_id = %s
+        """,
         (user_id,),
-    ) or {"attempts": 0}
-    solved = query_one(
-        "SELECT COUNT(*) AS solved FROM user_activity WHERE user_id = %s AND solved = TRUE",
-        (user_id,),
-    ) or {"solved": 0}
-    correct = query_one(
-        "SELECT COUNT(*) AS correct FROM user_activity WHERE user_id = %s AND correct = TRUE",
-        (user_id,),
-    ) or {"correct": 0}
-    bookmarked = query_one(
-        "SELECT COUNT(*) AS bookmarked FROM user_activity WHERE user_id = %s AND bookmarked = TRUE",
-        (user_id,),
-    ) or {"bookmarked": 0}
-    starred = query_one(
-        "SELECT COUNT(*) AS starred FROM user_activity WHERE user_id = %s AND starred = TRUE",
-        (user_id,),
-    ) or {"starred": 0}
-    avg_time_row = query_one(
-        "SELECT AVG(time_took) AS avg_time FROM user_activity WHERE user_id = %s AND time_took IS NOT NULL",
-        (user_id,),
-    ) or {"avg_time": None}
+    ) or {}
 
-    attempts = totals.get("attempts", 0) or 0
-    solved_count = solved.get("solved", 0) or 0
-    correct_count = correct.get("correct", 0) or 0
+    attempts = stats_row.get("attempts", 0) or 0
+    solved_count = stats_row.get("solved", 0) or 0
+    correct_count = stats_row.get("correct", 0) or 0
     incorrect_count = max(solved_count - correct_count, 0)
     accuracy = round((correct_count / solved_count) * 100, 1) if solved_count else 0.0
 
-    avg_time_val = avg_time_row.get("avg_time")
+    avg_time_val = stats_row.get("avg_time")
     if isinstance(avg_time_val, str):
         try:
             h, m, s = avg_time_val.split(":")
@@ -537,8 +591,8 @@ def user_stats(request):
             "correct": correct_count,
             "incorrect": incorrect_count,
             "accuracy": accuracy,
-            "bookmarked": bookmarked.get("bookmarked", 0) or 0,
-            "starred": starred.get("starred", 0) or 0,
+            "bookmarked": stats_row.get("bookmarked", 0) or 0,
+            "starred": stats_row.get("starred", 0) or 0,
             "avg_time": avg_time_display,
         },
         "recent": recent,
@@ -617,17 +671,7 @@ def progress_tracker(request):
 
     ensure_study_progress_table()
 
-    session_rows = query_all(
-        "SELECT DISTINCT session_code FROM questions ORDER BY session_code"
-    )
-    session_options = [
-        {
-            "code": row.get("session_code"),
-            "label": label_session(row.get("session_code")),
-            "display": display_session_code(row.get("session_code")),
-        }
-        for row in session_rows
-    ]
+    session_options = get_session_options()
     session_codes = [opt["code"] for opt in session_options]
     selected_session = request.GET.get("session") or (session_codes[0] if session_codes else None)
 
@@ -815,6 +859,7 @@ def update_activity(request):
             "UPDATE user_activity SET solved = %s, correct = %s, time_took = %s WHERE user_id = %s AND question_id = %s",
             (True, correct, time_took, user_id, question_id),
         )
+        invalidate_streak_cache(user_id)
     elif action == "bookmark":
         new_state = not activity.get("bookmarked", False)
         updates["bookmarked"] = new_state

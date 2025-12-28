@@ -234,6 +234,38 @@
           --champ-shadow: 0 .9rem 2.4rem rgba(79, 130, 246, .42);
         }
         .gold-toggle { gap:.5rem; }
+
+        /* About specific elements */
+        .stat-chip {
+          display:inline-flex; align-items:center; gap:.5rem;
+          padding:.65rem .95rem; border-radius:999px;
+          background:#fff; border:1px solid #e9ecef;
+          box-shadow: 0 .15rem .4rem rgba(0,0,0,.04);
+          font-weight:600; color: var(--r19-ink);
+        }
+        .stat-chip i { color: var(--r19-primary); }
+        .story-timeline { position:relative; }
+        .story-timeline::before {
+          content:""; position:absolute; left:14px; top:6px; bottom:6px; width:2px; background: linear-gradient(180deg, var(--r19-primary), var(--r19-accent));
+        }
+        .story-step { position:relative; padding-left:48px; }
+        .story-step::before {
+          content:""; position:absolute; left:6px; top:6px; width:18px; height:18px; border-radius:50%;
+          border:2px solid #fff; box-shadow:0 0 0 4px rgba(13,110,253,.2); background: var(--r19-primary);
+        }
+        .value-card {
+          border:1px solid #eef2f6; border-radius:.85rem; padding:1rem; background:#fff;
+          box-shadow: 0 .15rem .6rem rgba(0,0,0,.04);
+        }
+        .faq-item {
+          border-bottom:1px solid #e9ecef; padding:.75rem 0;
+        }
+        .faq-item:last-child { border-bottom:0; }
+        .pill {
+          display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .7rem;
+          border-radius:999px; background: rgba(13,110,253,.08); color: var(--r19-primary);
+          font-weight:600; font-size:.9rem;
+        }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -265,8 +297,7 @@
         <div class="row g-4 reveal-on-load">
           <div class="col-sm-6 col-lg-6">
             <div class="card creator-card h-100 text-center p-4 reveal">
-            {% load static %}
-<img class="avatar mx-auto mb-3" src="{% static 'main/img/about/creator1.jpeg' %}" alt="Shaurya Jain">
+              <img class="avatar mx-auto mb-3" src="{% static 'main/img/about/creator1.jpeg' %}" alt="Shaurya Jain">
               <h3 class="h5 mb-0">Shaurya Jain</h3>
             </div>
           </div>
@@ -313,6 +344,172 @@
                   <div class="fw-semibold">Progress</div>
                   <div class="text-muted small">Simple signals that make improvement visible.</div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-5">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-6">
+            <h2 class="h5 mb-2 section-head">Why we built ROOT 19</h2>
+            <p class="text-muted mb-3">Prep can feel chaotic and noisy. We built ROOT 19 to make practice sessions intentional: shorter, sharper, and aligned with what actually shows up in interviews and exams.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="stat-chip reveal"><i class="bi bi-collection"></i>1,200+ curated questions</span>
+              <span class="stat-chip reveal"><i class="bi bi-graph-up"></i>Progress-first design</span>
+              <span class="stat-chip reveal"><i class="bi bi-people"></i>Built by active learners</span>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold mb-1">Signal over noise</div>
+                  <div class="text-muted small mb-2">Tight, labeled sets help you drill what matters for product roles.</div>
+                  <div class="pill"><i class="bi bi-lightning-charge"></i>Fast iterations</div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold mb-1">Built-in accountability</div>
+                  <div class="text-muted small mb-2">Streaks and weekly goals keep you coming back without feeling heavy.</div>
+                  <div class="pill"><i class="bi bi-calendar-week"></i>Weekly cadence</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-5 site-meta p-4">
+        <div class="row g-4">
+          <div class="col-lg-5">
+            <h2 class="h5 mb-2 section-head">How ROOT 19 helps you practice</h2>
+            <p class="text-muted">A simple loop that keeps you improving without overwhelm.</p>
+          </div>
+          <div class="col-lg-7">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="value-card h-100 reveal">
+                  <div class="fw-semibold mb-1"><i class="bi bi-search text-primary me-1"></i>Discover</div>
+                  <div class="text-muted small">Pick a track and we surface starter sets matched to your level.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="value-card h-100 reveal">
+                  <div class="fw-semibold mb-1"><i class="bi bi-repeat text-primary me-1"></i>Drill</div>
+                  <div class="text-muted small">Timed prompts, hints, and spacing make every rep count.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="value-card h-100 reveal">
+                  <div class="fw-semibold mb-1"><i class="bi bi-check2-circle text-primary me-1"></i>Track</div>
+                  <div class="text-muted small">Lightweight stats show momentum so you know when to push or pause.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-5">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <h2 class="h5 mb-3 section-head">Our story</h2>
+            <div class="story-timeline">
+              <div class="story-step mb-3 reveal">
+                <div class="fw-semibold">2023 — The spark</div>
+                <div class="text-muted small">Two friends, too many tabs, and a realization that curated practice beats endless theory.</div>
+              </div>
+              <div class="story-step mb-3 reveal">
+                <div class="fw-semibold">2024 — Building the bank</div>
+                <div class="text-muted small">We handpicked and organized question sets to remove the guesswork for product learners.</div>
+              </div>
+              <div class="story-step reveal">
+                <div class="fw-semibold">Now — Growing with you</div>
+                <div class="text-muted small">Feedback from the community shapes what we ship next: better analytics, sharper prompts, and smoother review flows.</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <h2 class="h5 mb-3 section-head">What you’ll find inside</h2>
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold">Role-ready tracks</div>
+                  <div class="text-muted small">PM essentials, strategy, execution, and metrics without the filler.</div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold">Weekly spotlights</div>
+                  <div class="text-muted small">A champion theme each week to keep practice fresh and aligned to real scenarios.</div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold">Review-ready notes</div>
+                  <div class="text-muted small">Concise answer outlines and links so you can self-critique fast.</div>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="feature-card h-100 p-3 reveal">
+                  <div class="fw-semibold">Community input</div>
+                  <div class="text-muted small">Suggestions from learners shape the next batch of questions.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-5 site-meta p-4">
+        <div class="row g-4">
+          <div class="col-lg-5">
+            <h2 class="h5 mb-2 section-head">Our values</h2>
+            <p class="text-muted mb-0">Clarity over complexity. Consistency over intensity. Community over competition.</p>
+          </div>
+          <div class="col-lg-7">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="value-card h-100 text-center reveal">
+                  <div class="display-6 text-primary mb-1"><i class="bi bi-heart"></i></div>
+                  <div class="fw-semibold">Empathy</div>
+                  <div class="text-muted small">We design for busy lives and real constraints.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="value-card h-100 text-center reveal">
+                  <div class="display-6 text-primary mb-1"><i class="bi bi-compass"></i></div>
+                  <div class="fw-semibold">Intentionality</div>
+                  <div class="text-muted small">Every question has a purpose; every feature reduces friction.</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="value-card h-100 text-center reveal">
+                  <div class="display-6 text-primary mb-1"><i class="bi bi-stars"></i></div>
+                  <div class="fw-semibold">Momentum</div>
+                  <div class="text-muted small">Tiny wins add up. We celebrate progress, not perfection.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-5">
+        <div class="row g-4 justify-content-center">
+          <div class="col-lg-7">
+            <div class="p-4 feature-card h-100 reveal">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h2 class="h6 mb-0">Ready to practice with us?</h2>
+                <span class="pill"><i class="bi bi-lightbulb"></i>Start today</span>
+              </div>
+              <p class="text-muted small mb-3">Pick a track, set a weekly goal, and let ROOT 19 guide your reps. Your first set takes under 10 minutes.</p>
+              <div class="d-flex gap-2 flex-wrap">
+                <a href="/question-bank/" class="btn btn-primary btn-ripple">Browse question bank</a>
+                <a href="mailto:team@root19.com" class="btn btn-outline-secondary btn-ripple">Share feedback</a>
               </div>
             </div>
           </div>

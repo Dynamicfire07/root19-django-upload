@@ -1,14 +1,27 @@
 from datetime import datetime, timezone, timedelta
 
+from django.core.cache import cache
+
 from .db import query_all
 
 STREAK_THRESHOLD = 5
+_CACHE_KEY = "streak:{user_id}"
+# Cache streaks briefly to avoid repeating the heavy aggregate on every request.
+STREAK_CACHE_TTL = 300
+
+
+def _cache_key(user_id: str) -> str:
+    return _CACHE_KEY.format(user_id=user_id)
 
 
 def compute_streak(user_id: str) -> dict:
     """Return current and best streak (days with at least STREAK_THRESHOLD solves)."""
     if not user_id:
         return {"current": 0, "best": 0}
+
+    cached = cache.get(_cache_key(user_id))
+    if cached is not None:
+        return cached
 
     rows = query_all(
         """
@@ -50,4 +63,13 @@ def compute_streak(user_id: str) -> dict:
         prev_day = day
         best = max(best, run)
 
-    return {"current": current, "best": best}
+    result = {"current": current, "best": best}
+    cache.set(_cache_key(user_id), result, STREAK_CACHE_TTL)
+    return result
+
+
+def invalidate_streak_cache(user_id: str) -> None:
+    """Clear cached streaks when new activity is recorded."""
+    if not user_id:
+        return
+    cache.delete(_cache_key(user_id))
