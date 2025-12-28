@@ -71,6 +71,7 @@ _CACHE_MISS = object()
 def register(request):
     """Handle user registration."""
     if request.method == 'POST':
+        ensure_champion_access_field()
         name = request.POST['name']
         email = request.POST['email']
         password = request.POST['password']
@@ -94,8 +95,8 @@ def register(request):
         # Insert user
         execute(
             """
-            INSERT INTO users (user_id, name, email, password, role, school)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO users (user_id, name, email, password, role, school, champion_theme_access)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 get_next_user_id(),
@@ -104,6 +105,7 @@ def register(request):
                 hashed_password,
                 role,
                 school,
+                False,
             ),
         )
         messages.success(request, "Registration successful! Please log in.")
