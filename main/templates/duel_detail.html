@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duel • ROOT 19</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  {% include '_app_styles.html' %}
+  <style>
+    body { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; background:#f7f8fb; }
+    .duel-hero { background: linear-gradient(135deg, #0f172a, #2563eb); color:#fff; border-radius: 18px; padding: 1.5rem; box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.16); }
+    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .75rem; border-radius: 10px; background: rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); font-weight:700; }
+    .question-card { background:#fff; border:1px solid #e5e7eb; border-radius: 14px; padding:1rem; box-shadow: 0 1rem 2rem rgba(0,0,0,.06); }
+    .option-btn { border-radius: 12px; padding:.75rem 1rem; font-weight:700; }
+    .option-btn.active { border-color:#2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.15); }
+    .timer { font-weight: 800; font-size: 1.3rem; }
+    .loser-overlay {
+      position: fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      background: rgba(17,24,39,0.7); z-index: 1050; backdrop-filter: blur(2px); animation: fadeIn .3s ease;
+    }
+    .loser-card {
+      background:#fff; padding:2rem; border-radius: 16px; text-align:center;
+      box-shadow: 0 1.2rem 2.4rem rgba(0,0,0,.18);
+      animation: shake 0.6s ease;
+    }
+    .loser-icon { font-size:3rem; color:#e11d48; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+  </style>
+</head>
+<body class="bg-light">
+  {% include 'navbar.html' %}
+  <div class="container py-4">
+    <div class="duel-hero mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <div class="text-uppercase small text-white-50 fw-semibold">Duel</div>
+          <h1 class="mb-1">Code: {{ duel.code }}</h1>
+          <p class="mb-0 text-white-75">Status: <span id="duelStatus">{{ duel.status }}</span></p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+          <span class="pill"><i class="bi bi-people"></i> You + opponent</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-info d-none" id="infoBanner"></div>
+    <div class="alert alert-success d-none" id="resultBanner"></div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="fw-semibold mb-2">Details</div>
+            <div class="small text-muted">Questions: {{ duel.question_ids|length }}</div>
+            <div class="small text-muted">Syllabus: {{ duel.syllabus_code|default:"All" }}</div>
+            <hr>
+            <div class="small">Creator: {{ duel.creator_id }}</div>
+            <div class="small">Opponent: {{ duel.opponent_id|default:"Waiting..." }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold">Your submission</div>
+              <span class="badge bg-light text-dark border" id="submitState">Not submitted</span>
+            </div>
+            <p class="small text-muted mb-3">Pick A/B/C/D. New questions keep coming until the timer ends.</p>
+            <div class="question-card mb-3" id="questionWrap">
+              <div class="small text-uppercase text-muted fw-semibold mb-1" id="questionMeta">--</div>
+              <div class="fw-semibold mb-3" id="questionText">Waiting for question...</div>
+              <div class="mb-3">
+                <img id="questionImage" src="" alt="Question" class="img-fluid rounded d-none">
+              </div>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-outline-secondary option-btn" data-option="A">A</button>
+                <button type="button" class="btn btn-outline-secondary option-btn" data-option="B">B</button>
+                <button type="button" class="btn btn-outline-secondary option-btn" data-option="C">C</button>
+                <button type="button" class="btn btn-outline-secondary option-btn" data-option="D">D</button>
+              </div>
+            </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-secondary" id="prevBtn"><i class="bi bi-arrow-left"></i></button>
+                  <button type="button" class="btn btn-outline-secondary" id="nextBtn"><i class="bi bi-arrow-right"></i></button>
+                </div>
+                <button type="button" class="btn btn-primary" id="submitBtn">
+                  <i class="bi bi-trophy me-1"></i> Finish &amp; submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const duel = JSON.parse('{{ duel_json|escapejs }}');
+    const questions = JSON.parse('{{ questions_json|escapejs }}');
+    const userId = "{{ user_id|default:'' }}";
+    const infoBanner = document.getElementById('infoBanner');
+    const resultBanner = document.getElementById('resultBanner');
+    const statusLabel = document.getElementById('duelStatus');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitState = document.getElementById('submitState');
+    const nextBtn = document.getElementById('nextBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const optionButtons = document.querySelectorAll('.option-btn');
+    const questionText = document.getElementById('questionText');
+    const questionImage = document.getElementById('questionImage');
+    const questionMeta = document.getElementById('questionMeta');
+    let pollTimer = null;
+    let startedAt = Date.now();
+    let lastStatus = duel.status;
+    let currentQuestion = null;
+    let currentIndex = 0;
+    const answers = {}; // question_id -> letter
+    const myRole = userId === duel.creator_id ? 'creator' : (userId === duel.opponent_id ? 'opponent' : null);
+    const creatorName = "{{ creator_name|default:duel.creator_id }}";
+    const opponentName = "{{ opponent_name|default:duel.opponent_id }}";
+    const confettiCanvas = document.createElement('canvas');
+    confettiCanvas.style.position = 'fixed';
+    confettiCanvas.style.inset = '0';
+    confettiCanvas.style.width = '100%';
+    confettiCanvas.style.height = '100%';
+    confettiCanvas.style.pointerEvents = 'none';
+    confettiCanvas.style.zIndex = '1050';
+    document.body.appendChild(confettiCanvas);
+
+    function setInfo(msg) {
+      infoBanner.textContent = msg;
+      infoBanner.classList.toggle('d-none', !msg);
+    }
+
+    function setResult(msg, variant='success') {
+      resultBanner.textContent = msg;
+      resultBanner.className = `alert alert-${variant}`;
+      resultBanner.classList.remove('d-none');
+      if (variant === 'success') {
+        fireConfetti();
+      }
+    }
+
+    function renderQuestion() {
+      if (!questions.length) {
+        questionMeta.textContent = '';
+        questionText.textContent = 'No questions available.';
+        nextBtn.disabled = true;
+        submitBtn.disabled = true;
+        return;
+      }
+      currentQuestion = questions[currentIndex];
+      questionMeta.textContent = `${currentQuestion.session_code || ''} • ${currentQuestion.subtopic || ''} (Q${currentIndex + 1} of ${questions.length})`;
+      questionText.textContent = currentQuestion.extracted_text || 'Question';
+      if (currentQuestion.image_base64) {
+        questionImage.src = `data:image/png;base64,${currentQuestion.image_base64}`;
+        questionImage.classList.remove('d-none');
+      } else {
+        questionImage.classList.add('d-none');
+        questionImage.src = '';
+      }
+      optionButtons.forEach(btn => btn.classList.remove('active'));
+      const existing = answers[currentQuestion.question_id];
+      if (existing) {
+        optionButtons.forEach(btn => { if (btn.dataset.option === existing) btn.classList.add('active'); });
+      }
+      nextBtn.disabled = currentIndex >= questions.length - 1;
+      prevBtn.disabled = currentIndex <= 0;
+      submitBtn.classList.toggle('d-none', currentIndex !== questions.length - 1);
+    }
+
+    optionButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!currentQuestion) return;
+        optionButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        answers[currentQuestion.question_id] = btn.dataset.option;
+      });
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      if (currentIndex < questions.length - 1) {
+        currentIndex += 1;
+        renderQuestion();
+      }
+    });
+
+    prevBtn?.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex -= 1;
+        renderQuestion();
+      }
+    });
+
+    function updateStatus(data) {
+      statusLabel.textContent = data.status;
+      if (data.status === 'active' && lastStatus !== 'active') {
+        submitBtn.disabled = false;
+        submitState.textContent = 'Ready';
+        setInfo('Race: answer as fast as you can. No need to wait for opponent per question.');
+        startedAt = Date.now();
+        if (!currentQuestion) {
+          renderQuestion();
+        }
+      }
+      if (data.status === 'pending') {
+        submitBtn.disabled = true;
+        setInfo('Waiting for opponent to join. This page will update automatically.');
+      }
+      lastStatus = data.status;
+      duel.status = data.status;
+      duel.winner = data.winner;
+      duel.creator_submitted = data.creator_submitted;
+      duel.opponent_submitted = data.opponent_submitted;
+      duel.creator_score = data.creator_score;
+      duel.opponent_score = data.opponent_score;
+      duel.expires_at = data.expires_at;
+      if (data.status === 'completed' || data.status === 'expired') {
+        clearInterval(pollTimer);
+        const winnerName = data.winner === 'creator' ? creatorName : (data.winner === 'opponent' ? opponentName : null);
+        const winnerText = winnerName ? `Winner: ${winnerName}` : 'No winner';
+        const myWin = data.winner && myRole && data.winner === myRole;
+        const isDraw = data.winner === 'draw' || !data.winner || data.winner === 'none';
+        if (myWin) {
+          setResult(`You win! ${winnerText}`, 'success');
+        } else if (isDraw) {
+          setResult(`Duel ${data.status}. ${winnerText}.`, 'warning');
+        } else {
+          setResult(`You lost. ${winnerText}.`, 'danger');
+          showLoserScreen();
+        }
+        submitBtn.disabled = true;
+        submitState.textContent = 'Locked';
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/duels/${duel.id}/`);
+          if (!res.ok) return;
+          const data = await res.json();
+          updateStatus(data);
+        } catch (e) {}
+      }, 4000);
+    }
+
+    function updateTimer() {
+      // No time limit; keep submit enabled.
+    }
+
+    function fireConfetti() {
+      const canvas = confettiCanvas;
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const pieces = Array.from({length: 120}, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        size: Math.random() * 6 + 4,
+        speed: Math.random() * 3 + 2,
+        drift: Math.random() * 2 - 1,
+        color: `hsl(${Math.random()*360}, 80%, 60%)`,
+      }));
+
+      let frame = 0;
+      function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        pieces.forEach(p => {
+          p.y += p.speed;
+          p.x += p.drift;
+          if (p.y > canvas.height) p.y = -10;
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size*0.6);
+        });
+        frame += 1;
+        if (frame < 200) requestAnimationFrame(draw);
+        else ctx.clearRect(0,0,canvas.width,canvas.height);
+      }
+      draw();
+      setTimeout(() => {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+      }, 4000);
+    }
+
+    function showLoserScreen() {
+      const overlay = document.createElement('div');
+      overlay.className = 'loser-overlay';
+      overlay.innerHTML = `
+        <div class="loser-card">
+          <div class="loser-icon">💔</div>
+          <h3 class="mt-2">Defeated</h3>
+          <p class="text-muted mb-3">Opponent finished with more correct answers.</p>
+          <button class="btn btn-outline-secondary" id="closeLoser">Review answers</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#closeLoser').addEventListener('click', () => overlay.remove());
+    }
+
+    // Initial state
+    updateStatus(duel);
+    if (duel.status === 'completed' || duel.status === 'expired') {
+      const winnerText = duel.winner && duel.winner !== 'none' ? `Winner: ${duel.winner}` : 'No winner';
+      const winnerName = duel.winner === 'creator' ? creatorName : (duel.winner === 'opponent' ? opponentName : null);
+      const winnerLabel = winnerName ? `Winner: ${winnerName}` : winnerText;
+      setResult(`Duel ${duel.status}. ${winnerLabel}.`, duel.status === 'completed' ? 'success' : 'warning');
+      submitBtn.disabled = true;
+      submitState.textContent = 'Locked';
+    } else {
+      startPolling();
+      if (duel.status === 'active') {
+        renderQuestion();
+      }
+    }
+
+    updateTimer();
+
+    submitBtn?.addEventListener('click', async () => {
+      if (!userId) { alert('Log in to submit.'); return; }
+      submitBtn.disabled = true;
+      submitState.textContent = 'Submitting...';
+      const payload = {
+        answers,
+        time_taken_seconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+      };
+      try {
+        const res = await fetch(`/api/duels/${duel.id}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Submit failed.');
+          submitBtn.disabled = false;
+          submitState.textContent = 'Not submitted';
+          return;
+        }
+        submitState.textContent = 'Submitted';
+        submitBtn.disabled = true;
+        updateStatus(data);
+        if (data.status === 'active') {
+          setInfo('Waiting for opponent to finish...');
+        }
+      } catch (err) {
+        alert('Something went wrong.');
+        submitBtn.disabled = false;
+        submitState.textContent = 'Not submitted';
+      }
+    });
+  </script>
+  {% include 'footer.html' %}
+</body>
+</html>
