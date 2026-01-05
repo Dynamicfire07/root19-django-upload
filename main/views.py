@@ -233,11 +233,15 @@ def home(request):
     # Refresh session flags based on champion rotation
     session_user_id = request.session.get("user_id")
     if session_user_id:
-        if champion and session_user_id == champion.get("user_id"):
-            request.session["champion_access"] = True
-            request.session["champion_name"] = champion.get("name")
+        user = query_one(
+            "SELECT name, champion_theme_access FROM users WHERE user_id = %s",
+            (session_user_id,),
+        ) or {}
+        has_access = bool(user.get("champion_theme_access"))
+        request.session["champion_access"] = has_access
+        if has_access:
+            request.session["champion_name"] = user.get("name") or champion.get("name") if champion else user.get("name")
         else:
-            request.session["champion_access"] = False
             request.session.pop("champion_name", None)
 
     return render(request, 'home.html', {'total_questions': total_questions})
@@ -511,31 +515,16 @@ def update_weekly_champion():
         """
     )
 
-    current_holders = {
-        row.get("user_id")
-        for row in query_all("SELECT user_id FROM users WHERE champion_theme_access = TRUE")
-        if row.get("user_id")
-    }
-
     if not top:
-        if current_holders:
-            execute("UPDATE users SET champion_theme_access = FALSE WHERE champion_theme_access = TRUE")
         cache.set(CHAMPION_CACHE_KEY, None, CHAMPION_CACHE_TTL)
         return None
 
     winner_id = top.get("user_id")
 
-    stale_holders = [uid for uid in current_holders if uid != winner_id]
-    if stale_holders:
-        execute(
-            "UPDATE users SET champion_theme_access = FALSE WHERE champion_theme_access = TRUE AND user_id <> %s",
-            (winner_id,),
-        )
-    if winner_id not in current_holders:
-        execute(
-            "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
-            (winner_id,),
-        )
+    execute(
+        "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
+        (winner_id,),
+    )
 
     winner = query_one(
         "SELECT user_id, name, email FROM users WHERE user_id = %s",
