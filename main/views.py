@@ -458,6 +458,82 @@ def _evaluate_answers(question_ids: _t.List[str], answers: dict, time_taken_seco
     }
 
 
+def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list:
+    """
+    Build a question-by-question comparison payload with answers and saved states.
+    Only call after the duel is over.
+    """
+    question_ids = _parse_json_field(duel.get("question_ids"), [])
+    if not question_ids:
+        return []
+
+    rows = query_all(
+        """
+        SELECT question_id, extracted_text, session_code, subtopic, image_base64, answer
+        FROM questions WHERE question_id = ANY(%s)
+        """,
+        (question_ids,),
+    )
+    question_map = {r["question_id"]: r for r in rows}
+
+    creator_answers = _parse_json_field(duel.get("creator_answers"), {}) or {}
+    opponent_answers = _parse_json_field(duel.get("opponent_answers"), {}) or {}
+
+    saved = {}
+    if user_id:
+        saved_rows = query_all(
+            "SELECT question_id, bookmarked, starred FROM user_activity WHERE user_id = %s AND question_id = ANY(%s)",
+            (user_id, question_ids),
+        )
+        saved = {r["question_id"]: r for r in saved_rows}
+
+    comparison = []
+    for idx, qid in enumerate(question_ids, start=1):
+        meta = question_map.get(qid, {})
+        correct_answer = meta.get("answer")
+        creator_answer = creator_answers.get(qid)
+        opponent_answer = opponent_answers.get(qid)
+        correct_norm = (correct_answer or "").strip().lower()
+
+        def _is_correct(answer_val):
+            if answer_val is None:
+                return False
+            return (str(answer_val) or "").strip().lower() == correct_norm
+
+        saved_meta = saved.get(qid, {})
+        comparison.append(
+            {
+                "order": idx,
+                "question_id": qid,
+                "text": meta.get("extracted_text"),
+                "session_code": meta.get("session_code"),
+                "subtopic": meta.get("subtopic"),
+                "image_base64": meta.get("image_base64"),
+                "correct_answer": correct_answer,
+                "creator_answer": creator_answer,
+                "opponent_answer": opponent_answer,
+                "creator_correct": _is_correct(creator_answer),
+                "opponent_correct": _is_correct(opponent_answer),
+                "bookmarked": bool(saved_meta.get("bookmarked")),
+                "starred": bool(saved_meta.get("starred")),
+            }
+        )
+
+    return comparison
+
+
+def _duel_response_payload(duel: dict, user_id: _t.Optional[str] = None) -> dict:
+    """Base serializer with optional comparison details when duel is over."""
+    data = _serialize_duel(duel)
+    if (
+        duel.get("status") in ("completed", "expired")
+        and user_id
+        and user_id in [duel.get("creator_id"), duel.get("opponent_id")]
+    ):
+        data["comparison"] = _build_duel_comparison(duel, user_id)
+    return data
+
+
 def get_total_questions_count() -> int:
     """Cache the total question count to avoid counting on every request."""
     cached = cache.get(TOTAL_QUESTIONS_CACHE_KEY)
@@ -998,11 +1074,15 @@ def duel_play(request, duel_id: int):
     if duel.get("opponent_id"):
         o = query_one("SELECT name, email FROM users WHERE user_id = %s", (duel.get("opponent_id"),))
         opponent_name = o.get("name") or o.get("email") if o else None
+    comparison = []
+    if duel.get("status") in ("completed", "expired"):
+        comparison = _build_duel_comparison(duel, user_id)
     context = {
         "duel": serialized_duel,
         "duel_json": json.dumps(serialized_duel),
         "questions": questions,
         "questions_json": json.dumps(questions),
+        "comparison_json": json.dumps(comparison),
         "user_id": user_id,
         "creator_name": creator_name,
         "opponent_name": opponent_name,
@@ -1128,8 +1208,15 @@ def api_duel_status(request, duel_id: int):
     duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
     if not duel:
         return JsonResponse({"error": "Duel not found."}, status=404)
+
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to view this duel."}, status=401)
+    if user_id not in [duel.get("creator_id"), duel.get("opponent_id")]:
+        return JsonResponse({"error": "You are not a participant in this duel."}, status=403)
+
     duel = _auto_finalize_if_needed(duel)
-    return JsonResponse(_serialize_duel(duel))
+    return JsonResponse(_duel_response_payload(duel, user_id))
 
 
 @csrf_exempt
@@ -1206,7 +1293,7 @@ def api_duel_submit(request, duel_id: int):
     else:
         duel = _auto_finalize_if_needed(duel)
 
-    return JsonResponse(_serialize_duel(duel))
+    return JsonResponse(_duel_response_payload(duel, user_id))
 
 @csrf_exempt
 @require_POST

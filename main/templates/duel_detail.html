@@ -34,6 +34,11 @@
       animation: pop 0.5s ease;
     }
     .winner-icon { font-size:3rem; color:#f59e0b; }
+    .comparison-row { border:1px solid #e5e7eb; border-radius: 14px; padding:1rem; background:#fff; }
+    .answer-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.35rem .6rem; border-radius:10px; font-weight:700; }
+    .answer-correct { background:#ecfdf3; color:#166534; }
+    .answer-wrong { background:#fef2f2; color:#b91c1c; }
+    .answer-missing { background:#f3f4f6; color:#6b7280; }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes shake {
       10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -110,11 +115,21 @@
           </div>
         </div>
     </div>
+    <div class="card d-none mt-3" id="comparisonCard">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="h6 mb-0">Answer comparison</h2>
+          <span class="badge bg-light text-dark border">Visible after duel ends</span>
+        </div>
+        <div id="comparisonList" class="mt-3"></div>
+      </div>
+    </div>
   </div>
 
   <script>
     const duel = JSON.parse('{{ duel_json|escapejs }}');
     const questions = JSON.parse('{{ questions_json|escapejs }}');
+    const comparisonSeed = JSON.parse('{{ comparison_json|default:"[]"|escapejs }}');
     const userId = "{{ user_id|default:'' }}";
     const infoBanner = document.getElementById('infoBanner');
     const resultBanner = document.getElementById('resultBanner');
@@ -127,13 +142,18 @@
     const questionText = document.getElementById('questionText');
     const questionImage = document.getElementById('questionImage');
     const questionMeta = document.getElementById('questionMeta');
+    const comparisonCard = document.getElementById('comparisonCard');
+    const comparisonList = document.getElementById('comparisonList');
     let pollTimer = null;
     let startedAt = Date.now();
     let lastStatus = duel.status;
     let currentQuestion = null;
     let currentIndex = 0;
     const answers = {}; // question_id -> letter
-    const myRole = userId === duel.creator_id ? 'creator' : (userId === duel.opponent_id ? 'opponent' : null);
+    const normalizedUserId = userId ? String(userId) : '';
+    const normalizedCreatorId = duel.creator_id ? String(duel.creator_id) : '';
+    const normalizedOpponentId = duel.opponent_id ? String(duel.opponent_id) : '';
+    const myRole = normalizedUserId && normalizedUserId === normalizedCreatorId ? 'creator' : (normalizedUserId && normalizedUserId === normalizedOpponentId ? 'opponent' : null);
     const creatorName = "{{ creator_name|default:duel.creator_id }}";
     const opponentName = "{{ opponent_name|default:duel.opponent_id }}";
     const confettiCanvas = document.createElement('canvas');
@@ -157,6 +177,133 @@
       if (variant === 'success') {
         fireConfetti();
         showWinnerScreen();
+      }
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function badgeForAnswer(answer, isCorrect) {
+      if (!answer) {
+        return `<span class="answer-pill answer-missing">No answer</span>`;
+      }
+      const cls = isCorrect ? 'answer-correct' : 'answer-wrong';
+      return `<span class="answer-pill ${cls}">${escapeHtml(answer)}</span>`;
+    }
+
+    function renderComparison(comparison) {
+      if (!comparison || !comparison.length) return;
+      comparisonCard.classList.remove('d-none');
+      comparisonList.innerHTML = '';
+      comparison.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'comparison-row mb-3';
+        const header = document.createElement('div');
+        header.className = 'd-flex justify-content-between align-items-start gap-2';
+        const titleWrap = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'fw-semibold';
+        title.textContent = `Q${item.order || ''}: ${item.text || 'Question'}`;
+        const meta = document.createElement('div');
+        meta.className = 'small text-muted';
+        meta.textContent = `${item.session_code || ''}${item.subtopic ? ' • ' + item.subtopic : ''}`;
+        titleWrap.appendChild(title);
+        titleWrap.appendChild(meta);
+        header.appendChild(titleWrap);
+        const correct = document.createElement('div');
+        correct.className = 'small text-muted';
+        correct.innerHTML = `Correct: ${escapeHtml(item.correct_answer || 'n/a')}`;
+        header.appendChild(correct);
+        row.appendChild(header);
+
+        if (item.image_base64) {
+          const img = document.createElement('img');
+          img.src = `data:image/png;base64,${item.image_base64}`;
+          img.alt = 'Question image';
+          img.className = 'img-fluid rounded mt-2';
+          row.appendChild(img);
+        }
+
+        const answerGrid = document.createElement('div');
+        answerGrid.className = 'row mt-3';
+        const creatorCol = document.createElement('div');
+        creatorCol.className = 'col-md-6';
+        creatorCol.innerHTML = `
+          <div class="p-2 rounded bg-light h-100">
+            <div class="small text-muted mb-1">Creator</div>
+            ${badgeForAnswer(item.creator_answer, item.creator_correct)}
+          </div>
+        `;
+        const opponentCol = document.createElement('div');
+        opponentCol.className = 'col-md-6';
+        opponentCol.innerHTML = `
+          <div class="p-2 rounded bg-light h-100">
+            <div class="small text-muted mb-1">Opponent</div>
+            ${badgeForAnswer(item.opponent_answer, item.opponent_correct)}
+          </div>
+        `;
+        answerGrid.appendChild(creatorCol);
+        answerGrid.appendChild(opponentCol);
+        row.appendChild(answerGrid);
+
+        const actions = document.createElement('div');
+        actions.className = 'd-flex gap-2 mt-3 flex-wrap';
+        actions.innerHTML = `
+          <button class="btn btn-outline-secondary btn-sm bookmark-btn" data-qid="${escapeHtml(item.question_id)}" data-state="${item.bookmarked ? 'on' : 'off'}">
+            <i class="bi ${item.bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark'}"></i> ${item.bookmarked ? 'Bookmarked' : 'Bookmark'}
+          </button>
+          <button class="btn btn-outline-warning btn-sm star-btn" data-qid="${escapeHtml(item.question_id)}" data-state="${item.starred ? 'on' : 'off'}">
+            <i class="bi ${item.starred ? 'bi-star-fill' : 'bi-star'}"></i> ${item.starred ? 'Starred' : 'Star'}
+          </button>
+        `;
+        row.appendChild(actions);
+
+        comparisonList.appendChild(row);
+      });
+
+      comparisonList.querySelectorAll('.bookmark-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleSave(btn, 'bookmark'));
+      });
+      comparisonList.querySelectorAll('.star-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleSave(btn, 'star'));
+      });
+    }
+
+    function getCsrfToken() {
+      const match = document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith('csrftoken='));
+      return match ? match.split('=')[1] : '';
+    }
+
+    async function toggleSave(btn, action) {
+      if (!userId) { alert('Log in to save questions.'); return; }
+      const qid = btn.dataset.qid;
+      try {
+        const res = await fetch('/update-activity/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+          },
+          body: JSON.stringify({ user_id: userId, question_id: qid, action }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not update.');
+        const newState = action === 'bookmark' ? data.bookmarked : data.starred;
+        btn.dataset.state = newState ? 'on' : 'off';
+        if (action === 'bookmark') {
+          btn.innerHTML = `<i class="bi ${newState ? 'bi-bookmark-fill' : 'bi-bookmark'}"></i> ${newState ? 'Bookmarked' : 'Bookmark'}`;
+        } else {
+          btn.innerHTML = `<i class="bi ${newState ? 'bi-star-fill' : 'bi-star'}"></i> ${newState ? 'Starred' : 'Star'}`;
+        }
+      } catch (err) {
+        alert(err.message || 'Something went wrong.');
       }
     }
 
@@ -248,6 +395,9 @@
           setResult(`You lost. ${winnerText}.`, 'danger');
           showLoserScreen();
         }
+        if (data.comparison && data.comparison.length) {
+          renderComparison(data.comparison);
+        }
         submitBtn.disabled = true;
         submitState.textContent = 'Locked';
       }
@@ -258,6 +408,11 @@
       pollTimer = setInterval(async () => {
         try {
           const res = await fetch(`/api/duels/${duel.id}/`);
+          if (res.status === 401 || res.status === 403) {
+            clearInterval(pollTimer);
+            setInfo('Session expired or you are not a participant.');
+            return;
+          }
           if (!res.ok) return;
           const data = await res.json();
           updateStatus(data);
@@ -342,6 +497,9 @@
       setResult(`Duel ${duel.status}. ${winnerLabel}.`, duel.status === 'completed' ? 'success' : 'warning');
       submitBtn.disabled = true;
       submitState.textContent = 'Locked';
+      if (comparisonSeed && comparisonSeed.length) {
+        renderComparison(comparisonSeed);
+      }
     } else {
       startPolling();
       if (duel.status === 'active') {
