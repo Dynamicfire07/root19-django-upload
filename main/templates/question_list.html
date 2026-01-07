@@ -44,7 +44,7 @@
                 <div class="col-md-6">
                     <label for="session_code" class="form-label fw-semibold">Session Code</label>
                     <select id="session_code" class="form-select">
-                        <option value="" disabled selected>Select a session code</option>
+                        <option value="" selected>Select a session code</option>
                         {% for question in questions %}
                         <option value="{{ question.session_code }}">{{ question.session_code }}</option>
                         {% endfor %}
@@ -53,10 +53,14 @@
                 <div class="col-md-6">
                     <label for="subtopic" class="form-label fw-semibold">Subtopic</label>
                     <select id="subtopic" class="form-select" disabled>
-                        <option value="" disabled selected>Select a subtopic</option>
+                        <option value="" selected>Select a subtopic</option>
                     </select>
                 </div>
             </div>
+            <p class="small text-muted mb-4" id="filter-note">
+                If no syllabus code or subtopic is chosen, questions are shown in random order from everything.
+                If you choose a syllabus code without a subtopic, questions are shown in random order within that syllabus code only.
+            </p>
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
@@ -94,6 +98,15 @@
     <script>
         const allRows = Array.from(document.querySelectorAll('#question-table-body tr'));
 
+        function shuffle(array) {
+            const copy = [...array];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
         $('#session_code').change(function () {
             const sessionCode = $(this).val();
             const subtopicDropdown = $('#subtopic');
@@ -103,7 +116,7 @@
 
             $.get('/get-subtopics/', { session_code: sessionCode }, function (data) {
                 if (data.subtopics) {
-                    subtopicDropdown.empty().append('<option value="" disabled selected>Select a subtopic</option>');
+                    subtopicDropdown.empty().append('<option value="" selected>Select a subtopic</option>');
                     data.subtopics.forEach(subtopic => {
                         subtopicDropdown.append(`<option value="${subtopic}">${subtopic}</option>`);
                     });
@@ -124,12 +137,30 @@
         });
 
         function filterTable(sessionCode, subtopic) {
-            allRows.forEach(row => {
-                const matchSession = sessionCode ? row.dataset.session === sessionCode : true;
-                const matchSub = subtopic ? row.dataset.subtopic === subtopic : true;
-                row.style.display = (matchSession && matchSub) ? '' : 'none';
+            let rowsToShow = allRows;
+
+            if (!sessionCode && !subtopic) {
+                rowsToShow = shuffle(allRows);
+            } else if (sessionCode && !subtopic) {
+                rowsToShow = shuffle(allRows.filter(row => row.dataset.session === sessionCode));
+            } else {
+                rowsToShow = allRows.filter(row => {
+                    const matchSession = sessionCode ? row.dataset.session === sessionCode : true;
+                    const matchSub = subtopic ? row.dataset.subtopic === subtopic : true;
+                    return matchSession && matchSub;
+                });
+            }
+
+            const tbody = document.getElementById('question-table-body');
+            tbody.innerHTML = '';
+            rowsToShow.forEach(row => {
+                row.style.display = '';
+                tbody.appendChild(row);
             });
         }
+
+        // Initial random view when no filters are selected
+        filterTable("", "");
     </script>
 </body>
 </html>

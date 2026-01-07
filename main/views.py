@@ -59,6 +59,7 @@ TOTAL_QUESTIONS_TTL = 300  # 5 minutes
 SESSION_OPTIONS_CACHE_KEY = "session_options"
 SESSION_OPTIONS_TTL = 600  # 10 minutes
 SUBTOPIC_CACHE_TTL = 600
+PRACTICE_QUESTION_LIMIT = 40  # cap to avoid loading all questions at once
 
 _study_progress_ready = False
 _password_request_ready = False
@@ -634,27 +635,40 @@ def get_subtopics(request):
         )
         subtopics = [r['subtopic'] for r in rows]
         cache.set(cache_key, subtopics, SUBTOPIC_CACHE_TTL)
-    if not subtopics:
-        return JsonResponse({'error': 'No subtopics found for this session code'}, status=404)
-
-    return JsonResponse({'subtopics': list(subtopics)})
+    # Return an empty list instead of an error to allow "all subtopics" flows
+    return JsonResponse({'subtopics': list(subtopics or [])})
 
 def practice_questions(request):
-    """Render the practice questions page with questions in random order."""
-    session_code = request.GET.get('session_code')
-    subtopic = request.GET.get('subtopic')
+    """Render practice questions with flexible filtering and random ordering."""
+    session_code = (request.GET.get('session_code') or "").strip()
+    subtopic = (request.GET.get('subtopic') or "").strip()
+    limit_override = request.GET.get('limit')
+    try:
+        limit = max(1, min(int(limit_override), 200)) if limit_override else PRACTICE_QUESTION_LIMIT
+    except (TypeError, ValueError):
+        limit = PRACTICE_QUESTION_LIMIT
 
-    if not session_code or not subtopic:
-        return render(request, 'error.html', {
-            'message': 'Session code and subtopic are required'
-        })
+    # Build filtered query; select only needed columns and randomize in SQL
+    conditions = []
+    params = []
+    if session_code:
+        conditions.append("session_code = %s")
+        params.append(session_code)
+    if subtopic:
+        conditions.append("subtopic = %s")
+        params.append(subtopic)
+    where_sql = " AND ".join(conditions) if conditions else "TRUE"
 
-    # Fetch questions from PostgreSQL matching the filters
     docs = query_all(
-        "SELECT * FROM questions WHERE session_code = %s AND subtopic = %s",
-        (session_code, subtopic),
+        f"""
+        SELECT question_id, image_base64, answer, session_code, subtopic
+        FROM questions
+        WHERE {where_sql}
+        ORDER BY RANDOM()
+        LIMIT %s
+        """,
+        tuple(params + [limit]),
     )
-    random.shuffle(docs)
 
     user_id = request.session.get('user_id') or ""
     guest_limit = None

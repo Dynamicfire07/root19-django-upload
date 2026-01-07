@@ -45,7 +45,7 @@
                 <div class="col-md-6">
                     <label for="session_code" class="form-label fw-semibold">Session</label>
                     <select id="session_code" class="form-select">
-                        <option value="" disabled selected>Select a session</option>
+                        <option value="" selected>All sessions (random)</option>
                         {% for opt in session_options %}
                         <option value="{{ opt.code }}">{{ opt.label }} ({{ opt.display }})</option>
                         {% endfor %}
@@ -55,14 +55,20 @@
                 <div class="col-md-6">
                     <label for="subtopic" class="form-label fw-semibold">Subtopic</label>
                     <select id="subtopic" class="form-select" disabled>
-                        <option value="" disabled selected>Select a subtopic</option>
+                        <option value="" selected>All subtopics (random)</option>
                     </select>
                 </div>
 
                 <div class="col-12 d-flex justify-content-end">
-                    <button type="button" id="start-practice" class="btn btn-primary" disabled>
+                    <button type="button" id="start-practice" class="btn btn-primary">
                         <i class="bi bi-play-fill me-1"></i> Start Practice
                     </button>
+                </div>
+                <div class="col-12">
+                    <p class="text-muted small mb-0">
+                        If you leave syllabus code and subtopic empty, questions are pulled at random from everything.
+                        If you pick a syllabus code but no subtopic, questions are pulled at random from that syllabus code only.
+                    </p>
                 </div>
             </form>
         </div>
@@ -72,32 +78,40 @@
         $('#session_code').change(function () {
             const sessionCode = $(this).val();
             const subtopicDropdown = $('#subtopic');
-            subtopicDropdown.empty().append('<option value="" disabled selected>Loading...</option>');
-            subtopicDropdown.prop('disabled', true);
-            $('#start-practice').prop('disabled', true);
+            // Reset subtopics to default state before loading
+            subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
+
+            // If no session chosen, keep "all subtopics" and enable start
+            if (!sessionCode) {
+                subtopicDropdown.prop('disabled', false);
+                return;
+            }
+
+            subtopicDropdown.prop('disabled', true).empty().append('<option value="" selected>Loading...</option>');
 
             $.get('/get-subtopics/', { session_code: sessionCode })
                 .done(function (data) {
-                    subtopicDropdown.empty().append('<option value="" disabled selected>Select a subtopic</option>');
-                    data.subtopics.forEach(subtopic => {
+                    subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
+                    (data.subtopics || []).forEach(subtopic => {
                         subtopicDropdown.append(`<option value="${subtopic}">${subtopic}</option>`);
                     });
                     subtopicDropdown.prop('disabled', false);
-                    $('#start-practice').prop('disabled', false);
                 })
                 .fail(function (xhr) {
-                    alert(`Failed to load subtopics: ${xhr.responseJSON?.error || 'Unknown error'}`);
+                    console.warn('Failed to load subtopics', xhr);
+                    subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
+                    subtopicDropdown.prop('disabled', false);
                 });
         });
         
         $('#start-practice').click(function () {
-            const sessionCode = $('#session_code').val();
-            const subtopic = $('#subtopic').val();
-            if (!sessionCode || !subtopic) {
-                alert('Please select a session code and subtopic');
-                return;
-            }
-            window.location.href = `/practice-questions/?session_code=${sessionCode}&subtopic=${subtopic}`;
+            const sessionCode = $('#session_code').val() || '';
+            const subtopic = $('#subtopic').val() || '';
+            const params = [];
+            if (sessionCode) params.push(`session_code=${encodeURIComponent(sessionCode)}`);
+            if (subtopic) params.push(`subtopic=${encodeURIComponent(subtopic)}`);
+            const query = params.length ? `?${params.join('&')}` : '';
+            window.location.href = `/practice-questions/${query}`;
         });
     </script>
     {% include 'footer.html' %}
