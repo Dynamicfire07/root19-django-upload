@@ -38,7 +38,7 @@ SECRET_KEY = 'django-insecure-change-this-to-a-unique-key'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["app.root19.com", "34.180.32.10", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["app.root19.com", "34.14.174.152", "127.0.0.1", "localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://app.root19.com",
