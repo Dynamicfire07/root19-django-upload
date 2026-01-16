@@ -1,9 +1,18 @@
-db.sqlite3
-dump.sql
-.idea
-bin
-lib
-include
-venv
-compelted.csv
+.DS_Store
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Environments
+env/
+venv/
+.idea/
+.vscode/
+bin/
+include/
+lib/
+pyvenv.cfg
 .env
+
+# Static/media build outputs
