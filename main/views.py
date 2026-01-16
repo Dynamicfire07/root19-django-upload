@@ -66,6 +66,7 @@ _study_progress_ready = False
 _password_request_ready = False
 _chat_table_ready = False
 _ping_table_ready = False
+_chat_lock_ready = False
 _CACHE_MISS = object()
 
 # -------------------------
@@ -344,6 +345,42 @@ def ensure_ping_table():
     )
     execute("CREATE INDEX IF NOT EXISTS idx_chat_pings_target ON chat_pings (target_user_id, read_at)")
     _ping_table_ready = True
+
+
+def ensure_chat_lock_table():
+    """Create chat lock table (single row) to gate chat behind a password."""
+    global _chat_lock_ready
+    if _chat_lock_ready:
+        return
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_lock (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            locked BOOLEAN DEFAULT FALSE,
+            password_hash TEXT
+        );
+        """
+    )
+    # Guarantee single row exists
+    row = query_one("SELECT id FROM chat_lock WHERE id = 1")
+    if not row:
+        execute("INSERT INTO chat_lock (id, locked, password_hash) VALUES (1, FALSE, NULL)")
+    _chat_lock_ready = True
+
+
+def get_chat_lock():
+    ensure_chat_lock_table()
+    row = query_one("SELECT locked, password_hash FROM chat_lock WHERE id = 1")
+    return row or {"locked": False, "password_hash": None}
+
+
+def set_chat_lock(locked: bool, password: str | None):
+    ensure_chat_lock_table()
+    pwd_hash = make_password(password) if password else None
+    execute(
+        "UPDATE chat_lock SET locked = %s, password_hash = %s WHERE id = 1",
+        (locked, pwd_hash),
+    )
 
 def ensure_champion_access_field():
     """Ensure champion_theme_access exists on users."""
@@ -1883,6 +1920,11 @@ def chat_room(request):
 
     ensure_chat_table()
     ensure_ping_table()
+    lock = get_chat_lock()
+    if lock.get("locked") and not request.user.is_staff:
+        if not request.session.get("chat_unlocked"):
+            return render(request, "chat_locked.html", {"locked": True})
+
     rows = query_all(
         """
         SELECT m.id, m.user_id, m.body, m.image_base64, m.created_at, COALESCE(u.name, m.user_id) AS user_name
@@ -1904,6 +1946,9 @@ def chat_send(request):
 
     ensure_chat_table()
     ensure_ping_table()
+    lock = get_chat_lock()
+    if lock.get("locked") and not request.user.is_staff and not request.session.get("chat_unlocked"):
+        return HttpResponseBadRequest("Chat is locked.")
     body = (request.POST.get("body") or "").strip()
     image_file = request.FILES.get("image")
     image_b64 = None
@@ -1949,9 +1994,12 @@ def chat_share_question(request):
     """Share a question image + optional note into community chat."""
     ensure_chat_table()
     ensure_ping_table()
+    lock = get_chat_lock()
     user_id = request.session.get("user_id")
     if not user_id:
         return JsonResponse({"error": "Please log in to share."}, status=401)
+    if lock.get("locked") and not request.user.is_staff and not request.session.get("chat_unlocked"):
+        return JsonResponse({"error": "Chat is locked."}, status=403)
 
     try:
         if request.content_type and "application/json" in request.content_type:
@@ -1994,9 +2042,12 @@ def chat_ping(request):
     """Ping another user; stores a ping and optional chat note."""
     ensure_chat_table()
     ensure_ping_table()
+    lock = get_chat_lock()
     user_id = request.session.get("user_id")
     if not user_id:
         return JsonResponse({"error": "Please log in to ping."}, status=401)
+    if lock.get("locked") and not request.user.is_staff and not request.session.get("chat_unlocked"):
+        return JsonResponse({"error": "Chat is locked."}, status=403)
 
     try:
         data = json.loads(request.body.decode("utf-8"))
@@ -2060,6 +2111,42 @@ def chat_pings(request):
         (user_id,),
     )
     return JsonResponse({"unread": len(rows), "pings": rows})
+
+
+def chat_unlock(request):
+    """Allow non-staff users to unlock chat with a password if locked."""
+    ensure_chat_lock_table()
+    lock = get_chat_lock()
+    if not lock.get("locked"):
+        request.session["chat_unlocked"] = True
+        return redirect("chat_room")
+
+    if request.method == "POST":
+        supplied = (request.POST.get("password") or "").strip()
+        if lock.get("password_hash") and check_password(supplied, lock["password_hash"]):
+            request.session["chat_unlocked"] = True
+            messages.success(request, "Chat unlocked.")
+            return redirect("chat_room")
+        messages.error(request, "Incorrect password. Please contact admin.")
+
+    return render(request, "chat_locked.html", {"locked": True})
+
+
+@staff_member_required
+def chat_lock_admin(request):
+    """Admin toggle to lock/unlock chat with a password."""
+    ensure_chat_lock_table()
+    lock = get_chat_lock()
+    if request.method == "POST":
+        locked = request.POST.get("locked") == "on"
+        pwd = (request.POST.get("password") or "").strip()
+        set_chat_lock(locked, pwd if locked else None)
+        # Invalidate user unlock state
+        request.session.pop("chat_unlocked", None)
+        messages.success(request, "Chat lock updated.")
+        return redirect("chat_lock_admin")
+
+    return render(request, "staff_chat_lock.html", {"locked": lock.get("locked"), "has_password": bool(lock.get("password_hash"))})
 
 
 # -------------------------
