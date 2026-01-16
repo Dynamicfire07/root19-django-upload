@@ -374,9 +374,15 @@ def get_chat_lock():
     return row or {"locked": False, "password_hash": None}
 
 
-def set_chat_lock(locked: bool, password: str | None):
+def set_chat_lock(locked: bool, password: str | None, existing_hash: str | None = None):
     ensure_chat_lock_table()
-    pwd_hash = make_password(password) if password else None
+    if locked:
+        if password:
+            pwd_hash = make_password(password)
+        else:
+            pwd_hash = existing_hash
+    else:
+        pwd_hash = None
     execute(
         "UPDATE chat_lock SET locked = %s, password_hash = %s WHERE id = 1",
         (locked, pwd_hash),
@@ -2140,7 +2146,15 @@ def chat_lock_admin(request):
     if request.method == "POST":
         locked = request.POST.get("locked") == "on"
         pwd = (request.POST.get("password") or "").strip()
-        set_chat_lock(locked, pwd if locked else None)
+        if locked and not pwd and not lock.get("password_hash"):
+            messages.error(request, "Set a password before locking chat.")
+            return redirect("chat_lock_admin")
+
+        set_chat_lock(
+            locked,
+            pwd if locked and pwd else None,
+            existing_hash=lock.get("password_hash") if locked and not pwd else None,
+        )
         # Invalidate user unlock state
         request.session.pop("chat_unlocked", None)
         messages.success(request, "Chat lock updated.")

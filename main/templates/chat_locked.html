@@ -16,15 +16,14 @@
     <div class="card bg-dark border border-secondary-subtle shadow-lg">
       <div class="card-body p-4">
         <h1 class="h4 mb-3 text-warning">Community Chat is locked</h1>
-        <p class="text-muted mb-4">
-          This page is under construction. Please wait for this to be implemented.
-          If you really want to test, please ask an admin for the password.
-        </p>
         <form method="post" action="{% url 'chat_unlock' %}" class="row g-3">
           {% csrf_token %}
           <div class="col-12 col-md-6">
             <label class="form-label text-white">Password</label>
             <input type="password" name="password" class="form-control" placeholder="Enter password">
+            <div class="form-text text-warning">
+              Under construction — contact an admin for the password if you want to try.
+            </div>
           </div>
           <div class="col-12 d-flex align-items-end gap-2">
             <button type="submit" class="btn btn-primary">Unlock</button>
