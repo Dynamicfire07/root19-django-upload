@@ -13,12 +13,12 @@
   {% include '_analytics_head.html' %}
   {% include '_favicon.html' %}
   <style>
-    body { background: #040915; }
-    .chat-shell { max-width: 1200px; margin: 0 auto; }
-    .chat-stage { background: radial-gradient(circle at 20% 20%, rgba(79,195,247,.06), transparent 28%), radial-gradient(circle at 80% 0%, rgba(75,107,255,.05), transparent 24%), #0b1223; border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: 0 22px 60px rgba(0,0,0,.35); min-height: 75vh; display: flex; flex-direction: column; overflow: hidden; }
+    body { background: #040915; min-height: 100vh; }
+    .chat-shell { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
+    .chat-stage { background: radial-gradient(circle at 20% 20%, rgba(79,195,247,.06), transparent 28%), radial-gradient(circle at 80% 0%, rgba(75,107,255,.05), transparent 24%), #0b1223; border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: 0 22px 60px rgba(0,0,0,.35); height: calc(100vh - 220px); max-height: calc(100vh - 220px); display: flex; flex-direction: column; overflow: hidden; }
     .chat-header { padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: space-between; }
     .chat-title { font-size: 1.4rem; letter-spacing: .02em; color: #fff; }
-    .chat-feed { position: relative; flex: 1; overflow-y: auto; padding: 24px 28px; scrollbar-width: thin; scrollbar-color: #4b6bff rgba(255,255,255,.08); scrollbar-gutter: stable both-edges; }
+    .chat-feed { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px; scrollbar-width: thin; scrollbar-color: #4b6bff rgba(255,255,255,.08); scrollbar-gutter: stable both-edges; }
     .chat-feed::-webkit-scrollbar { width: 8px; }
     .chat-feed::-webkit-scrollbar-track { background: rgba(255,255,255,.04); border-radius: 999px; }
     .chat-feed::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #4b6bff, #00c9ff); border-radius: 999px; }
@@ -45,6 +45,7 @@
       .bubble { max-width: 100%; }
       .chat-input-wrap { flex-direction: column; align-items: stretch; }
       .send-btn { width: 100%; }
+      .chat-stage { height: calc(100vh - 180px); max-height: calc(100vh - 180px); }
     }
   </style>
 </head>
@@ -158,6 +159,7 @@
   <script>
     // Scroll to bottom on load
     const chatList = document.getElementById('chatList');
+    const chatStage = document.querySelector('.chat-stage');
     const rail = document.getElementById('chatRail');
     const thumb = document.getElementById('chatThumb');
     const pingModalEl = document.getElementById('pingModal');
@@ -173,6 +175,18 @@
     const attachmentName = document.getElementById('attachmentName');
     const attachmentThumb = document.getElementById('attachmentThumb');
     const attachmentRemove = document.getElementById('attachmentRemove');
+
+    const setChatStageHeight = () => {
+      if (!chatStage) return;
+      const navHeight = document.querySelector('nav.navbar')?.offsetHeight || 0;
+      const footerHeight = document.querySelector('footer')?.offsetHeight || 0;
+      const chrome = navHeight + footerHeight + 48; // account for padding/margins
+      const available = Math.max(window.innerHeight - chrome, 360);
+      chatStage.style.height = `${available}px`;
+      chatStage.style.maxHeight = `${available}px`;
+    };
+    setChatStageHeight();
+    window.addEventListener('resize', setChatStageHeight);
 
     if (chatList) {
       chatList.scrollTop = chatList.scrollHeight;
