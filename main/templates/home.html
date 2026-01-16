@@ -101,12 +101,21 @@
                             </div>
 
                             <div class="panel-body">
-                                <div class="panel-row">
+                                <div class="panel-row align-items-start">
                                     <div>
-                                        <div class="small text-white-50">Questions live</div>
-                                        <div class="display-6 fw-bold text-white mb-0" id="question-count">0</div>
+                                        <div class="panel-label">Questions live</div>
+                                        <div class="panel-stat" id="question-count">0</div>
                                     </div>
-                                    <div class="mini-graph gradient-primary"></div>
+                                    <div class="panel-status">
+                                        <div class="chip chip-ghost">
+                                            <span class="chip-dot"></span>
+                                            Live sync
+                                        </div>
+                                        <div class="status-card">
+                                            <span class="status-label">Next set</span>
+                                            <span class="status-meta">Auto-assign</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="panel-row mt-4">
@@ -115,7 +124,7 @@
                                             <span class="text-white">Accuracy</span>
                                             <span class="text-white-50">80%</span>
                                         </div>
-                                        <div class="progress slim-progress">
+                                        <div class="progress slim-progress glow-progress">
                                             <div class="progress-bar bg-light" role="progressbar"
                                                  style="width: 80%;" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
@@ -125,12 +134,14 @@
                                             <span class="text-white">Streak</span>
                                             <span class="text-white-50">7 days</span>
                                         </div>
-                                        <div class="progress slim-progress">
+                                        <div class="progress slim-progress glow-progress">
                                             <div class="progress-bar bg-success" role="progressbar"
                                                  style="width: 70%;" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="panel-divider"></div>
 
                                 <div class="panel-footer">
                                     <div class="d-flex align-items-center gap-2 text-white">

@@ -1,10 +1,16 @@
 {% load static %}
 <style>
+  #r19Nav {
+    --nav-bg: linear-gradient(180deg, rgba(13,19,33,.96), rgba(6,10,20,.96));
+    --nav-border: rgba(255,255,255,.08);
+    --nav-pill: rgba(255,255,255,.05);
+    --nav-pill-hover: rgba(255,255,255,.12);
+  }
   .gold-navbar {
     background: var(--nav-gradient, linear-gradient(135deg, #f6d365, #fda085)) !important;
     color: #fff;
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12);
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 18px 48px rgba(253,160,133,.35);
   }
   .gold-navbar .navbar-brand,
   .gold-navbar .nav-link,
@@ -14,53 +20,97 @@
   .gold-navbar .nav-link:hover {
     color: #fff !important;
     background: rgba(255,255,255,.18);
-    border-radius: 10px;
+    border-radius: 999px;
   }
   /* Default nav (non-champion/admin) */
-  .navbar.bg-primary {
-    background:#111827 !important;
-    color:#fff;
+  #r19Nav.bg-primary {
+    background: #0b1220 !important;
+    color:#e5e7eb;
+    border-bottom: 1px solid var(--nav-border);
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
   }
-  .navbar.bg-primary .nav-link,
-  .navbar.bg-primary .navbar-brand,
-  .navbar.bg-primary .navbar-toggler { color:#fff !important; }
+  #r19Nav .navbar-brand img { filter: invert(1) saturate(.85); }
+  #r19Nav .navbar-toggler { border: 1px solid rgba(255,255,255,.2); }
+  .nav-pills-lite .nav-link {
+    padding: .45rem .9rem;
+    border-radius: 999px;
+    color: #e5e7eb;
+    font-weight: 600;
+    letter-spacing: .01em;
+    transition: all .15s ease;
+    background: transparent;
+  }
+  .nav-pills-lite .nav-link:hover,
+  .nav-pills-lite .nav-link:focus {
+    color: #fff;
+    background: var(--nav-pill-hover);
+  }
+  .nav-pills-lite .dropdown-menu {
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 18px 42px rgba(0,0,0,.35);
+    overflow: hidden;
+  }
+  .nav-pill-divider {
+    display: inline-block;
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,.12);
+    margin: 0 .5rem;
+  }
   body[data-champion-theme="gold"] { --nav-gradient: linear-gradient(135deg, #f6d365, #fda085); }
   body[data-champion-theme="emerald"] { --nav-gradient: linear-gradient(135deg, #a3f7c0, #4caf7a); }
   body[data-champion-theme="sapphire"] { --nav-gradient: linear-gradient(135deg, #b8ccff, #4f82f6); }
+  @media (max-width: 991.98px) {
+    #r19Nav.bg-primary { border-radius: 0; margin-top: 0; }
+    .nav-pills-lite .nav-link { padding: .6rem 0; border-radius: 12px; }
+    .nav-pill-divider { display: none; }
+  }
 </style>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary" id="r19Nav">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary px-0" id="r19Nav">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-            <img src="{% static 'main/img/logos.png' %}" alt="Root 19" height="40" class="d-inline-block" style="filter: invert(1); margin-left:-4px;">
+            <img src="{% static 'main/img/logos.png' %}" alt="Root 19" height="40" class="d-inline-block" style="margin-left:-4px;">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
+            <ul class="navbar-nav me-auto align-items-lg-center gap-lg-1 nav-pills-lite">
                 <li class="nav-item">
                     <a class="nav-link" href="/">Home</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/question-bank/">Question Bank</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/duels/">Duels</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/leaderboard/">Leaderboard</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/about/">About</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/report-bug/">Report Bug</a>
-                </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="legalDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Legal
+                    <a class="nav-link dropdown-toggle" href="#" id="practiceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Practice
                     </a>
-                    <ul class="dropdown-menu" aria-labelledby="legalDropdown">
+                    <ul class="dropdown-menu" aria-labelledby="practiceDropdown">
+                        <li><a class="dropdown-item" href="/question-bank/">Question Bank</a></li>
+                        <li><a class="dropdown-item" href="/duels/">Duels</a></li>
+                        <li><a class="dropdown-item" href="/leaderboard/">Leaderboard</a></li>
+                    </ul>
+                </li>
+                {% if request.session.user_id %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        My Space
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="profileDropdown">
+                        <li><a class="dropdown-item" href="/user-stats/">My Stats</a></li>
+                        <li><a class="dropdown-item" href="/progress/">Progress</a></li>
+                        <li><a class="dropdown-item" href="/saved/">Saved</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="moreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        More
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="moreDropdown">
+                        <li><a class="dropdown-item" href="/about/">About</a></li>
+                        <li><a class="dropdown-item" href="/report-bug/">Report Bug</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="dropdown-header text-muted">Legal</li>
                         <li><a class="dropdown-item" href="/terms/">Terms of Service</a></li>
                         <li><a class="dropdown-item" href="/privacy/">Privacy Policy</a></li>
                         <li><a class="dropdown-item" href="/disclaimer/">Disclaimer</a></li>
@@ -69,7 +119,7 @@
                 {% if request.user.is_staff %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Admin Tools
+                        Admin
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                         <li><a class="dropdown-item" href="/staff/user-activity/">Activity</a></li>
@@ -80,22 +130,11 @@
                     </ul>
                 </li>
                 {% endif %}
-                {% if request.session.user_id %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/user-stats/">🔥 My Stats</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/progress/">Progress</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/saved/">Saved</a>
-                </li>
-                {% endif %}
             </ul>
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2 nav-pills-lite">
                 {% if request.user.is_staff or request.session.champion_access %}
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Theme
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end p-2 small" aria-labelledby="themeDropdown" style="min-width: 220px;">
@@ -117,12 +156,12 @@
                 {% if request.session.user_name %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Welcome, {{ request.session.user_name }}
+                        {{ request.session.user_name }}
                         {% if streak_current %}
                             <span class="badge bg-warning-subtle text-warning ms-1">🔥 {{ streak_current }}d</span>
                         {% endif %}
                     </a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                         <li><a class="dropdown-item" href="/change-password/">Change Password</a></li>
                         <li><a class="dropdown-item" href="/logout/">Logout</a></li>
                     </ul>
