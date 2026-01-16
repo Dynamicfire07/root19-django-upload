@@ -98,6 +98,22 @@ DATABASES = {
         "OPTIONS": {"sslmode": DB_SSLMODE},
     }
 }
+# Optional: separate chat database (e.g., Cloud SQL) while keeping questions on Supabase.
+CHAT_DB_HOST = os.getenv("CHAT_DB_HOST", DB_HOST)
+CHAT_DB_PORT = os.getenv("CHAT_DB_PORT", DB_PORT)
+CHAT_DB_NAME = os.getenv("CHAT_DB_NAME", DB_NAME)
+CHAT_DB_USER = os.getenv("CHAT_DB_USER", DB_USER)
+CHAT_DB_PASSWORD = os.getenv("CHAT_DB_PASSWORD", DB_PASSWORD)
+CHAT_DB_SSLMODE = os.getenv("CHAT_DB_SSLMODE", DB_SSLMODE)
+CHAT_DB = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": CHAT_DB_NAME,
+    "USER": CHAT_DB_USER,
+    "PASSWORD": CHAT_DB_PASSWORD,
+    "HOST": CHAT_DB_HOST,
+    "PORT": CHAT_DB_PORT,
+    "OPTIONS": {"sslmode": CHAT_DB_SSLMODE},
+}
 # Seconds to wait when opening the DB connection (used by main/db.py).
 DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
 DATABASE_URL = os.getenv(

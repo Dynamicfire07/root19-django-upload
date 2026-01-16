@@ -128,6 +128,11 @@
             background-color: #f8d7da;
             border: 2px solid #f5c6cb;
         }
+        .share-chat-btn {
+            margin-top: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
 
         #prev-btn, #next-btn {
             width: 150px;
@@ -157,6 +162,7 @@
             <div class="question question-container" 
                  data-question-id="{{ question.question_id }}" 
                  data-answer="{{ question.answer }}" 
+                 data-image="{{ question.image_base64 }}"
                  style="display: none;">
                 <img src="data:image/png;base64,{{ question.image_base64 }}" 
                      alt="Question Image" class="mb-4">
@@ -164,6 +170,9 @@
                     <button class="side-button star" title="Star"><i class="bi bi-star-fill"></i></button>
                     <button class="side-button bookmark" title="Bookmark"><i class="bi bi-bookmark-fill"></i></button>
                     <button class="side-button reveal" title="Reveal Answer"><i class="bi bi-eye-fill"></i></button>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-outline-primary share-chat-btn" type="button">Send to Community Chat</button>
                 </div>
                 <div class="d-flex justify-content-center">
                     <button class="btn btn-primary answer-btn" data-answer="A">A</button>
@@ -196,10 +205,48 @@
         </div></div>
     </div>
 
+    <!-- Share to Chat Modal -->
+    <div class="modal fade" id="shareChatModal" tabindex="-1" aria-labelledby="shareChatLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="shareChatLabel">Send to Community Chat</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3 text-center">
+              <img id="shareChatPreview" src="" alt="Question preview" class="img-fluid rounded" style="max-height:240px; border: 1px solid #e5e7eb;">
+            </div>
+            <form id="shareChatForm">
+              <input type="hidden" name="question_id" id="shareQuestionId">
+              <div class="mb-3">
+                <label class="form-label fw-semibold" for="shareMessage">Add a note (optional)</label>
+                <textarea class="form-control" id="shareMessage" name="message" rows="2" maxlength="200" placeholder="What do you want to say about this question?"></textarea>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small" id="shareStatus"></div>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {% include 'footer.html' %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const USER_ID = "{{ user_id|default:'' }}"; // Passed from Django view
+        const shareModalEl = document.getElementById('shareChatModal');
+        const shareModal = shareModalEl ? new bootstrap.Modal(shareModalEl) : null;
+        const shareForm = document.getElementById('shareChatForm');
+        const sharePreview = document.getElementById('shareChatPreview');
+        const shareQuestionId = document.getElementById('shareQuestionId');
+        const shareMessage = document.getElementById('shareMessage');
+        const shareStatus = document.getElementById('shareStatus');
         let currentIndex = 0;
         const isLoggedIn = !!USER_ID;
         const maxGuestQuestions = 2;
@@ -247,6 +294,51 @@
                 setTimeout(() => feedback.style.display = "none", 2000);
             });
         });
+
+        document.querySelectorAll('.share-chat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!isLoggedIn) {
+                    showLoginPrompt();
+                    return;
+                }
+                const q = btn.closest('.question');
+                const imgData = q.dataset.image || "";
+                const qid = q.dataset.questionId;
+                shareQuestionId.value = qid;
+                shareMessage.value = "";
+                shareStatus.textContent = "";
+                sharePreview.src = imgData ? `data:image/png;base64,${imgData}` : "";
+                if (shareModal) shareModal.show();
+            });
+        });
+
+        if (shareForm) {
+            shareForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!isLoggedIn) {
+                    showLoginPrompt();
+                    return;
+                }
+                const qid = shareQuestionId.value;
+                const msg = shareMessage.value.trim();
+                shareStatus.textContent = "Sending...";
+                fetch("/chat/share-question/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question_id: qid, message: msg })
+                })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) throw new Error(data.error || "Failed to send");
+                    shareStatus.textContent = "Sent! Open Chat to view.";
+                    setTimeout(() => { if (shareModal) shareModal.hide(); }, 800);
+                })
+                .catch(err => {
+                    console.error(err);
+                    shareStatus.textContent = err.message || "Failed to send";
+                });
+            });
+        }
 
         document.querySelectorAll('.side-button.star').forEach(btn => {
             btn.addEventListener('click', () => {

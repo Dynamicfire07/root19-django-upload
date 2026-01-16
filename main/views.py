@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.cache import cache
 from datetime import datetime, timezone, timedelta
+import base64
 from types import SimpleNamespace
 from django.utils.crypto import get_random_string
 import random
@@ -63,6 +64,8 @@ PRACTICE_QUESTION_LIMIT = 40  # cap to avoid loading all questions at once
 
 _study_progress_ready = False
 _password_request_ready = False
+_chat_table_ready = False
+_ping_table_ready = False
 _CACHE_MISS = object()
 
 # -------------------------
@@ -295,6 +298,53 @@ def ensure_password_request_table():
     )
     _password_request_ready = True
 
+def ensure_chat_table():
+    """Create chat_messages table if missing."""
+    global _chat_table_ready
+    if _chat_table_ready:
+        return
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            body TEXT NOT NULL DEFAULT '',
+            image_base64 TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """
+    )
+    execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS image_base64 TEXT;"
+    )
+    execute(
+        "ALTER TABLE chat_messages ALTER COLUMN body SET DEFAULT '';"
+    )
+    execute("CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages (created_at DESC);")
+    _chat_table_ready = True
+
+
+def ensure_ping_table():
+    """Create ping notifications table if missing."""
+    global _ping_table_ready
+    if _ping_table_ready:
+        return
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_pings (
+            id SERIAL PRIMARY KEY,
+            target_user_id VARCHAR(255) NOT NULL,
+            from_user_id VARCHAR(255) NOT NULL,
+            message TEXT,
+            chat_message_id INTEGER,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            read_at TIMESTAMPTZ
+        );
+        """
+    )
+    execute("CREATE INDEX IF NOT EXISTS idx_chat_pings_target ON chat_pings (target_user_id, read_at)")
+    _ping_table_ready = True
+
 def ensure_champion_access_field():
     """Ensure champion_theme_access exists on users."""
     execute(
@@ -337,6 +387,25 @@ def ensure_duel_tables():
     execute("CREATE INDEX IF NOT EXISTS idx_duels_code ON duels (code)")
     execute("CREATE INDEX IF NOT EXISTS idx_duels_status ON duels (status)")
     execute("CREATE INDEX IF NOT EXISTS idx_duels_expires ON duels (expires_at)")
+
+
+def ensure_chat_table():
+    """Create chat_messages table if missing."""
+    global _chat_table_ready
+    if _chat_table_ready:
+        return
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            body TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        """
+    )
+    execute("CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages (created_at DESC);")
+    _chat_table_ready = True
 
 
 def _parse_json_field(val, fallback):
@@ -1800,6 +1869,197 @@ def staff_theme_access(request):
         """
     )
     return render(request, "staff_theme_access.html", {"users": users})
+
+
+# -------------------------
+# CHAT
+# -------------------------
+
+def chat_room(request):
+    """Simple chat room: list messages and allow posting."""
+    if not request.session.get("user_id"):
+        messages.info(request, "Please log in to chat.")
+        return redirect("login")
+
+    ensure_chat_table()
+    ensure_ping_table()
+    rows = query_all(
+        """
+        SELECT m.id, m.user_id, m.body, m.image_base64, m.created_at, COALESCE(u.name, m.user_id) AS user_name
+        FROM chat_messages m
+        LEFT JOIN users u ON u.user_id = m.user_id
+        ORDER BY m.created_at ASC
+        LIMIT 200
+        """
+    )
+    return render(request, "chat.html", {"messages": rows})
+
+
+@require_POST
+def chat_send(request):
+    """Post a new chat message."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return HttpResponseBadRequest("Not logged in.")
+
+    ensure_chat_table()
+    ensure_ping_table()
+    body = (request.POST.get("body") or "").strip()
+    image_file = request.FILES.get("image")
+    image_b64 = None
+
+    if not body and not image_file:
+        messages.error(request, "Add a message or an image.")
+        return redirect("chat_room")
+
+    if body and len(body) > 1000:
+        messages.error(request, "Message too long (max 1000 characters).")
+        return redirect("chat_room")
+
+    if image_file:
+        # Limit to ~2MB
+        if getattr(image_file, "size", 0) > 2 * 1024 * 1024:
+            messages.error(request, "Image too large (max 2MB).")
+            return redirect("chat_room")
+        content = image_file.read()
+        mime = image_file.content_type or "image/jpeg"
+        encoded = base64.b64encode(content).decode("ascii")
+        image_b64 = f"data:{mime};base64,{encoded}"
+
+    execute(
+        "INSERT INTO chat_messages (user_id, body, image_base64) VALUES (%s, %s, %s)",
+        (user_id, body, image_b64),
+    )
+    return redirect("chat_room")
+
+
+@staff_member_required
+@require_POST
+def chat_delete(request, message_id: int):
+    """Allow admins/staff to delete a message."""
+    ensure_chat_table()
+    execute("DELETE FROM chat_messages WHERE id = %s", (message_id,))
+    messages.success(request, "Message deleted.")
+    return redirect("chat_room")
+
+
+@csrf_exempt
+@require_POST
+def chat_share_question(request):
+    """Share a question image + optional note into community chat."""
+    ensure_chat_table()
+    ensure_ping_table()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to share."}, status=401)
+
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            data = json.loads(request.body.decode("utf-8"))
+        else:
+            data = request.POST
+    except Exception:
+        data = {}
+
+    question_id = (data.get("question_id") or "").strip()
+    message_body = (data.get("message") or "").strip()
+
+    if not question_id:
+        return JsonResponse({"error": "question_id is required"}, status=400)
+
+    if message_body and len(message_body) > 1000:
+        return JsonResponse({"error": "Message too long (max 1000 characters)."}, status=400)
+
+    question = query_one(
+        "SELECT question_id, image_base64 FROM questions WHERE question_id = %s",
+        (question_id,),
+    )
+    if not question:
+        return JsonResponse({"error": "Question not found."}, status=404)
+
+    image_b64 = question.get("image_base64")
+    data_uri = f"data:image/png;base64,{image_b64}" if image_b64 else None
+    body = message_body or f"Shared question {question_id}"
+
+    execute(
+        "INSERT INTO chat_messages (user_id, body, image_base64) VALUES (%s, %s, %s)",
+        (user_id, body, data_uri),
+    )
+    return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+@require_POST
+def chat_ping(request):
+    """Ping another user; stores a ping and optional chat note."""
+    ensure_chat_table()
+    ensure_ping_table()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to ping."}, status=401)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        data = request.POST
+
+    target_user_id = (data.get("target_user_id") or "").strip()
+    message_body = (data.get("message") or "").strip()
+
+    if not target_user_id:
+        return JsonResponse({"error": "target_user_id is required"}, status=400)
+    if target_user_id == user_id:
+        return JsonResponse({"error": "You cannot ping yourself."}, status=400)
+    if message_body and len(message_body) > 200:
+        return JsonResponse({"error": "Message too long (max 200 characters)."}, status=400)
+
+    target = query_one("SELECT user_id, name FROM users WHERE user_id = %s", (target_user_id,))
+    if not target:
+        return JsonResponse({"error": "User not found"}, status=404)
+
+    note = message_body or "You have been pinged."
+    body = f"@{target.get('name') or target_user_id}: {note}"
+    execute(
+        "INSERT INTO chat_messages (user_id, body) VALUES (%s, %s)",
+        (user_id, body),
+    )
+    chat_row = query_one("SELECT id FROM chat_messages WHERE user_id = %s ORDER BY id DESC LIMIT 1", (user_id,))
+    chat_message_id = chat_row.get("id") if chat_row else None
+    execute(
+        "INSERT INTO chat_pings (target_user_id, from_user_id, message, chat_message_id) VALUES (%s, %s, %s, %s)",
+        (target_user_id, user_id, note, chat_message_id),
+    )
+    return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+def chat_pings(request):
+    """Return unread pings for the current user; optional mark-as-read on POST."""
+    ensure_ping_table()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in"}, status=401)
+
+    if request.method == "POST":
+        execute(
+            "UPDATE chat_pings SET read_at = NOW() WHERE target_user_id = %s AND read_at IS NULL",
+            (user_id,),
+        )
+        return JsonResponse({"status": "ok"})
+
+    rows = query_all(
+        """
+        SELECT p.id, p.from_user_id, p.message, p.chat_message_id, p.created_at,
+               COALESCE(u.name, p.from_user_id) AS from_user_name
+        FROM chat_pings p
+        LEFT JOIN users u ON u.user_id = p.from_user_id
+        WHERE p.target_user_id = %s AND p.read_at IS NULL
+        ORDER BY p.created_at DESC
+        LIMIT 20
+        """,
+        (user_id,),
+    )
+    return JsonResponse({"unread": len(rows), "pings": rows})
 
 
 # -------------------------

@@ -1,0 +1,283 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {% include '_app_styles.html' %}
+  {% include '_analytics_head.html' %}
+  {% include '_favicon.html' %}
+  <style>
+    body { background: #040915; }
+    .chat-shell { max-width: 1200px; margin: 0 auto; }
+    .chat-stage { background: radial-gradient(circle at 20% 20%, rgba(79,195,247,.06), transparent 28%), radial-gradient(circle at 80% 0%, rgba(75,107,255,.05), transparent 24%), #0b1223; border: 1px solid rgba(255,255,255,.08); border-radius: 22px; box-shadow: 0 22px 60px rgba(0,0,0,.35); min-height: 75vh; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: space-between; }
+    .chat-title { font-size: 1.4rem; letter-spacing: .02em; color: #fff; }
+    .chat-feed { position: relative; flex: 1; overflow-y: auto; padding: 24px 28px; scrollbar-width: thin; scrollbar-color: #4b6bff rgba(255,255,255,.08); scrollbar-gutter: stable both-edges; }
+    .chat-feed::-webkit-scrollbar { width: 8px; }
+    .chat-feed::-webkit-scrollbar-track { background: rgba(255,255,255,.04); border-radius: 999px; }
+    .chat-feed::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #4b6bff, #00c9ff); border-radius: 999px; }
+    .scroll-rail { position: absolute; top: 14px; bottom: 14px; right: 10px; width: 8px; background: rgba(255,255,255,.04); border-radius: 999px; pointer-events: none; }
+    .scroll-thumb { position: absolute; left: 0; right: 0; width: 8px; background: linear-gradient(180deg, #4b6bff, #00c9ff); border-radius: 999px; opacity: .85; }
+    .bubble-row { display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; width: 100%; }
+    .bubble { padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.05); color: #e8edf7; min-width: 220px; max-width: 65ch; position: relative; }
+    .bubble-self { margin-left: auto; background: linear-gradient(135deg, #2d7bff, #36c8ff); color: #f8fbff; border-color: rgba(255,255,255,.3); }
+    .bubble-meta { display: flex; justify-content: space-between; gap: 8px; font-size: .82rem; color: #d8e2f7; align-items: center; }
+    .bubble-user { font-weight: 700; letter-spacing: .01em; color: #fff; }
+    .bubble-body { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: #f3f6ff; }
+    .bubble-actions { position: absolute; top: 8px; right: 10px; }
+    .bubble-actions form { display: inline; }
+    .ping-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
+    .chat-input-bar { border-top: 1px solid rgba(255,255,255,.1); padding: 16px 20px; background: rgba(0,0,0,.15); }
+    .chat-input-wrap { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .chat-input-wrap textarea { flex: 1; resize: none; min-height: 64px; max-height: 150px; background: #0c1427; color: #e8edf7; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px; }
+    .chat-input-wrap textarea:focus { box-shadow: 0 0 0 2px rgba(79,195,247,.35); outline: none; }
+    .send-btn { padding: 12px 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,.2); background: linear-gradient(135deg, #4b6bff, #00c9ff); color: #fff; font-weight: 700; letter-spacing: .01em; }
+    .attachment-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e8edf7; font-size: 0.9rem; }
+    .attachment-chip img { width: 24px; height: 24px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); }
+    .attachment-remove { background: transparent; color: #fff; border: none; padding: 0 6px; font-weight: 700; }
+    @media (max-width: 768px) {
+      .bubble { max-width: 100%; }
+      .chat-input-wrap { flex-direction: column; align-items: stretch; }
+      .send-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <div class="container py-4 chat-shell">
+    <div class="chat-stage">
+      <div class="chat-header">
+        <div>
+          <div class="text-uppercase text-white small fw-semibold">Community Chat</div>
+          <div class="chat-title">Drop a message, stay in sync</div>
+        </div>
+        <div class="d-flex align-items-center gap-3 text-white small fw-semibold">
+          <div>Scroll ↓</div>
+          <div class="d-flex align-items-center gap-1">
+            <span>Notifications</span>
+            <span class="badge bg-warning text-dark" id="pingBadge" style="display:none;">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-feed" id="chatList">
+        <div class="scroll-rail" id="chatRail"><div class="scroll-thumb" id="chatThumb"></div></div>
+        {% if messages %}
+          {% for msg in messages %}
+            <div class="bubble-row {% if request.session.user_id == msg.user_id %}justify-content-end{% endif %}">
+              <div class="bubble {% if request.session.user_id == msg.user_id %}bubble-self{% endif %}">
+                {% if request.user.is_staff %}
+                  <div class="bubble-actions">
+                    <form method="post" action="{% url 'chat_delete' msg.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-light py-0 px-2">✕</button>
+                    </form>
+                  </div>
+                {% endif %}
+                <div class="bubble-meta">
+                  <span class="bubble-user">{{ msg.user_name }}</span>
+                  <span class="d-flex align-items-center gap-2">
+                    <span>{{ msg.created_at }}</span>
+                    {% if request.session.user_id != msg.user_id %}
+                    <button type="button" class="ping-btn" data-user-id="{{ msg.user_id }}" data-user-name="{{ msg.user_name }}">🔔 Ping</button>
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="bubble-body">{{ msg.body }}</div>
+                {% if msg.image_base64 %}
+                  <div class="mt-2">
+                    <img src="{{ msg.image_base64 }}" alt="Shared image" style="max-width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 8px 18px rgba(0,0,0,.35);">
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-muted">No messages yet.</div>
+        {% endif %}
+      </div>
+
+  <div class="chat-input-bar">
+    <form method="post" action="{% url 'chat_send' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="chat-input-wrap">
+        <textarea id="chatInput" name="body" maxlength="1000" placeholder="Message box"></textarea>
+            <label class="btn btn-outline-light mb-0" for="chatImage">Image</label>
+            <input type="file" id="chatImage" name="image" accept="image/*" class="d-none">
+            <button type="submit" class="send-btn">Send</button>
+          </div>
+          <div class="mt-2" id="attachmentPreview" style="display:none;">
+            <span class="attachment-chip">
+              <img id="attachmentThumb" src="" alt="Preview">
+              <span id="attachmentName"></span>
+              <button type="button" class="attachment-remove" id="attachmentRemove" aria-label="Remove attachment">✕</button>
+            </span>
+          </div>
+    </form>
+  </div>
+</div>
+
+<!-- Ping Modal -->
+<div class="modal fade" id="pingModal" tabindex="-1" aria-labelledby="pingModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pingModalLabel">Ping user</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Ping <strong id="pingUserName"></strong></p>
+        <form id="pingForm">
+          <input type="hidden" id="pingUserId" name="target_user_id">
+          <div class="mb-3">
+            <label class="form-label">Add a note (optional)</label>
+            <textarea class="form-control" id="pingMessage" name="message" rows="2" maxlength="200" placeholder="Hey, check this out!"></textarea>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted small" id="pingStatus"></div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Send Ping</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+
+  {% include 'footer.html' %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Scroll to bottom on load
+    const chatList = document.getElementById('chatList');
+    const rail = document.getElementById('chatRail');
+    const thumb = document.getElementById('chatThumb');
+    const pingModalEl = document.getElementById('pingModal');
+    const pingModal = pingModalEl ? new bootstrap.Modal(pingModalEl) : null;
+    const pingForm = document.getElementById('pingForm');
+    const pingUserName = document.getElementById('pingUserName');
+    const pingUserId = document.getElementById('pingUserId');
+    const pingMessage = document.getElementById('pingMessage');
+    const pingStatus = document.getElementById('pingStatus');
+    const pingBadge = document.getElementById('pingBadge');
+    const fileInput = document.getElementById('chatImage');
+    const attachmentPreview = document.getElementById('attachmentPreview');
+    const attachmentName = document.getElementById('attachmentName');
+    const attachmentThumb = document.getElementById('attachmentThumb');
+    const attachmentRemove = document.getElementById('attachmentRemove');
+
+    if (chatList) {
+      chatList.scrollTop = chatList.scrollHeight;
+      const updateThumb = () => {
+        const view = chatList.clientHeight;
+        const total = chatList.scrollHeight;
+        const scrollTop = chatList.scrollTop;
+        if (total <= view) {
+          rail.style.display = "none";
+          return;
+        }
+        rail.style.display = "block";
+        const thumbHeight = Math.max((view / total) * (rail.clientHeight), 30);
+        const maxThumbTop = rail.clientHeight - thumbHeight;
+        const scrollRatio = scrollTop / (total - view);
+        const thumbTop = maxThumbTop * scrollRatio;
+        thumb.style.height = thumbHeight + "px";
+        thumb.style.top = thumbTop + "px";
+      };
+      chatList.addEventListener('scroll', updateThumb);
+      window.addEventListener('resize', updateThumb);
+      updateThumb();
+    }
+
+    document.querySelectorAll('.ping-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.userId;
+        const uname = btn.dataset.userName || uid;
+        pingUserId.value = uid;
+        pingUserName.textContent = uname;
+        pingMessage.value = "";
+        pingStatus.textContent = "";
+        if (pingModal) pingModal.show();
+      });
+    });
+
+    if (pingForm) {
+      pingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const payload = {
+          target_user_id: pingUserId.value,
+          message: pingMessage.value.trim(),
+        };
+        pingStatus.textContent = "Sending...";
+        fetch("/chat/ping/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok) throw new Error(data.error || "Failed to ping");
+          pingStatus.textContent = "Ping sent.";
+          setTimeout(() => { if (pingModal) pingModal.hide(); }, 600);
+        })
+        .catch(err => {
+          pingStatus.textContent = err.message || "Failed to ping";
+        });
+      });
+    }
+
+    function fetchPings() {
+      fetch("/chat/pings/")
+        .then(res => res.json())
+        .then(data => {
+          const count = data.unread || 0;
+          if (count > 0) {
+            pingBadge.style.display = "inline-block";
+            pingBadge.textContent = count;
+          } else {
+            pingBadge.style.display = "none";
+          }
+        })
+        .catch(() => {});
+    }
+    fetchPings();
+    setInterval(fetchPings, 20000);
+
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) {
+          attachmentPreview.style.display = "none";
+          attachmentThumb.src = "";
+          attachmentName.textContent = "";
+          return;
+        }
+        attachmentName.textContent = file.name;
+        attachmentPreview.style.display = "inline-block";
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          attachmentThumb.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (attachmentRemove) {
+      attachmentRemove.addEventListener('click', () => {
+        fileInput.value = "";
+        attachmentPreview.style.display = "none";
+        attachmentThumb.src = "";
+        attachmentName.textContent = "";
+      });
+    }
+  </script>
+</body>
+</html>
