@@ -43,6 +43,7 @@
     .attachment-remove { background: transparent; color: #fff; border: none; padding: 0 6px; font-weight: 700; }
     .reply-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(75,107,255,.12); border: 1px solid rgba(75,107,255,.25); color: #e8edf7; }
     .reply-chip strong { color: #fff; }
+    .reply-to-name { color: #fff; font-weight: 600; }
     .reply-preview { padding: 8px 10px; border-left: 3px solid #4b6bff; background: rgba(255,255,255,.04); border-radius: 10px; color: #e8edf7; font-size: 0.9rem; }
     .reply-button { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
     @media (max-width: 768px) {
@@ -97,7 +98,7 @@
                 </div>
                 {% if msg.reply_to_id %}
                   <div class="reply-preview mb-2">
-                    <div class="small text-muted mb-1">Replying to {{ msg.parent_user_name }}</div>
+                    <div class="small text-muted mb-1">Replying to <span class="reply-to-name">{{ msg.parent_user_name }}</span></div>
                     <div>{{ msg.parent_body|default:"(original message unavailable)" }}</div>
                   </div>
                 {% endif %}
@@ -122,7 +123,7 @@
         <input type="hidden" name="reply_to_id" id="replyToId">
         <div class="reply-chip w-100 mb-2" id="replyChip" style="display:none;">
           <div>
-            <div class="small text-muted">Replying to <span id="replyingTo"></span></div>
+            <div class="small text-muted">Replying to <span id="replyingTo" class="reply-to-name"></span></div>
             <div id="replySnippet" class="text-white"></div>
           </div>
           <button type="button" class="btn btn-sm btn-outline-light" id="cancelReply">✕</button>
