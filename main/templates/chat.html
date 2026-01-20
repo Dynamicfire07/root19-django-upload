@@ -41,6 +41,10 @@
     .attachment-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e8edf7; font-size: 0.9rem; }
     .attachment-chip img { width: 24px; height: 24px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); }
     .attachment-remove { background: transparent; color: #fff; border: none; padding: 0 6px; font-weight: 700; }
+    .reply-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(75,107,255,.12); border: 1px solid rgba(75,107,255,.25); color: #e8edf7; }
+    .reply-chip strong { color: #fff; }
+    .reply-preview { padding: 8px 10px; border-left: 3px solid #4b6bff; background: rgba(255,255,255,.04); border-radius: 10px; color: #e8edf7; font-size: 0.9rem; }
+    .reply-button { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: .78rem; }
     @media (max-width: 768px) {
       .bubble { max-width: 100%; }
       .chat-input-wrap { flex-direction: column; align-items: stretch; }
@@ -85,11 +89,18 @@
                   <span class="bubble-user">{{ msg.user_name }}</span>
                   <span class="d-flex align-items-center gap-2">
                     <span>{{ msg.created_at }}</span>
+                    <button type="button" class="reply-button" data-reply-id="{{ msg.id }}" data-reply-user="{{ msg.user_name }}" data-reply-body="{{ msg.body|truncatechars:80 }}">↩ Reply</button>
                     {% if request.session.user_id != msg.user_id %}
                     <button type="button" class="ping-btn" data-user-id="{{ msg.user_id }}" data-user-name="{{ msg.user_name }}">🔔 Ping</button>
                     {% endif %}
                   </span>
                 </div>
+                {% if msg.reply_to_id %}
+                  <div class="reply-preview mb-2">
+                    <div class="small text-muted mb-1">Replying to {{ msg.parent_user_name }}</div>
+                    <div>{{ msg.parent_body|default:"(original message unavailable)" }}</div>
+                  </div>
+                {% endif %}
                 <div class="bubble-body">{{ msg.body }}</div>
                 {% if msg.image_base64 %}
                   <div class="mt-2">
@@ -108,6 +119,14 @@
     <form method="post" action="{% url 'chat_send' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="chat-input-wrap">
+        <input type="hidden" name="reply_to_id" id="replyToId">
+        <div class="reply-chip w-100 mb-2" id="replyChip" style="display:none;">
+          <div>
+            <div class="small text-muted">Replying to <span id="replyingTo"></span></div>
+            <div id="replySnippet" class="text-white"></div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-light" id="cancelReply">✕</button>
+        </div>
         <textarea id="chatInput" name="body" maxlength="1000" placeholder="Message box"></textarea>
             <label class="btn btn-outline-light mb-0" for="chatImage">Image</label>
             <input type="file" id="chatImage" name="image" accept="image/*" class="d-none">
@@ -122,7 +141,7 @@
           </div>
     </form>
   </div>
-</div>
+  </div>
 
 <!-- Ping Modal -->
 <div class="modal fade" id="pingModal" tabindex="-1" aria-labelledby="pingModalLabel" aria-hidden="true">
@@ -175,6 +194,12 @@
     const attachmentName = document.getElementById('attachmentName');
     const attachmentThumb = document.getElementById('attachmentThumb');
     const attachmentRemove = document.getElementById('attachmentRemove');
+    const replyToInput = document.getElementById('replyToId');
+    const replyChip = document.getElementById('replyChip');
+    const replyingTo = document.getElementById('replyingTo');
+    const replySnippet = document.getElementById('replySnippet');
+    const cancelReply = document.getElementById('cancelReply');
+    const chatInput = document.getElementById('chatInput');
 
     const setChatStageHeight = () => {
       if (!chatStage) return;
@@ -222,6 +247,28 @@
         if (pingModal) pingModal.show();
       });
     });
+
+    const setReplyTarget = (id, user, snippet) => {
+      if (!replyToInput || !replyChip) return;
+      replyToInput.value = id || "";
+      if (replyingTo) replyingTo.textContent = user || "user";
+      if (replySnippet) replySnippet.textContent = snippet || "";
+      replyChip.style.display = id ? "flex" : "none";
+      if (chatInput) chatInput.focus();
+    };
+
+    document.querySelectorAll('.reply-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.replyId;
+        const targetUser = btn.dataset.replyUser;
+        const targetBody = btn.dataset.replyBody || "";
+        setReplyTarget(targetId, targetUser, targetBody);
+      });
+    });
+
+    if (cancelReply) {
+      cancelReply.addEventListener('click', () => setReplyTarget("", "", ""));
+    }
 
     if (pingForm) {
       pingForm.addEventListener('submit', (e) => {

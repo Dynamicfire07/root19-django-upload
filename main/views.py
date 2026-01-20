@@ -311,6 +311,7 @@ def ensure_chat_table():
             user_id VARCHAR(255) NOT NULL,
             body TEXT NOT NULL DEFAULT '',
             image_base64 TEXT,
+            reply_to_id INTEGER,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
         """
@@ -318,6 +319,7 @@ def ensure_chat_table():
     execute(
         "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS image_base64 TEXT;"
     )
+    execute("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER;")
     execute(
         "ALTER TABLE chat_messages ALTER COLUMN body SET DEFAULT '';"
     )
@@ -430,25 +432,6 @@ def ensure_duel_tables():
     execute("CREATE INDEX IF NOT EXISTS idx_duels_code ON duels (code)")
     execute("CREATE INDEX IF NOT EXISTS idx_duels_status ON duels (status)")
     execute("CREATE INDEX IF NOT EXISTS idx_duels_expires ON duels (expires_at)")
-
-
-def ensure_chat_table():
-    """Create chat_messages table if missing."""
-    global _chat_table_ready
-    if _chat_table_ready:
-        return
-    execute(
-        """
-        CREATE TABLE IF NOT EXISTS chat_messages (
-            id SERIAL PRIMARY KEY,
-            user_id VARCHAR(255) NOT NULL,
-            body TEXT NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        """
-    )
-    execute("CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_messages (created_at DESC);")
-    _chat_table_ready = True
 
 
 def _parse_json_field(val, fallback):
@@ -1933,14 +1916,31 @@ def chat_room(request):
 
     rows = query_all(
         """
-        SELECT m.id, m.user_id, m.body, m.image_base64, m.created_at, COALESCE(u.name, m.user_id) AS user_name
+        SELECT m.id,
+               m.user_id,
+               m.body,
+               m.image_base64,
+               m.reply_to_id,
+               m.created_at,
+               COALESCE(u.name, m.user_id) AS user_name,
+               COALESCE(pu.name, p.user_id) AS parent_user_name,
+               p.body AS parent_body
         FROM chat_messages m
         LEFT JOIN users u ON u.user_id = m.user_id
+        LEFT JOIN chat_messages p ON p.id = m.reply_to_id
+        LEFT JOIN users pu ON pu.user_id = p.user_id
         ORDER BY m.created_at ASC
         LIMIT 200
         """
     )
-    return render(request, "chat.html", {"messages": rows})
+    return render(
+        request,
+        "chat.html",
+        {
+            "messages": rows,
+            "chat_lock": lock,
+        },
+    )
 
 
 @require_POST
@@ -1956,6 +1956,10 @@ def chat_send(request):
     if lock.get("locked") and not request.user.is_staff and not request.session.get("chat_unlocked"):
         return HttpResponseBadRequest("Chat is locked.")
     body = (request.POST.get("body") or "").strip()
+    reply_to_raw = (request.POST.get("reply_to_id") or "").strip()
+    reply_to_id = None
+    if reply_to_raw.isdigit():
+        reply_to_id = int(reply_to_raw)
     image_file = request.FILES.get("image")
     image_b64 = None
 
@@ -1978,8 +1982,8 @@ def chat_send(request):
         image_b64 = f"data:{mime};base64,{encoded}"
 
     execute(
-        "INSERT INTO chat_messages (user_id, body, image_base64) VALUES (%s, %s, %s)",
-        (user_id, body, image_b64),
+        "INSERT INTO chat_messages (user_id, body, image_base64, reply_to_id) VALUES (%s, %s, %s, %s)",
+        (user_id, body, image_b64, reply_to_id),
     )
     return redirect("chat_room")
 
