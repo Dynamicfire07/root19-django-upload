@@ -31,20 +31,35 @@
             <div class="container position-relative">
                 <div class="row align-items-center justify-content-between gy-5">
                     <div class="col-lg-6">
-                        <div class="hero-pill text-uppercase fw-semibold">Root 19 / Prep Platform</div>
+                        <div class="hero-pill text-uppercase fw-semibold">Root 19 / Exam Prep Platform</div>
                         <h1 class="display-4 fw-bold hero-title mt-3">
-                            Practice smarter. Stay exam-ready.
+                            Built for serious exam prep, from first practice to final revision.
                         </h1>
                         <p class="hero-lede mt-3 mb-4">
-                            Work through curated questions, see progress in real time, and keep momentum with a clean, focused workspace.
+                            Run focused drills, track your readiness, compete in live duels, and keep your full progress synced in one professional workspace.
                         </p>
 
                         <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
-                            <a class="btn btn-light btn-lg shadow-sm" href="/question-bank/">Explore question bank</a>
-                            <a class="btn btn-outline-light btn-lg" href="/register/">Create your account</a>
+                            <a class="btn btn-light btn-lg shadow-sm" href="{% url 'question_bank' %}">Explore question bank</a>
+                            <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create your account</a>
                             <div class="d-flex align-items-center gap-2 hero-meta">
                                 <span class="pulse-dot"></span>
                                 <small class="text-white-50">Live updates every day</small>
+                            </div>
+                        </div>
+
+                        <div class="hero-metric-row mt-4">
+                            <div class="hero-metric">
+                                <div class="hero-metric-label">Question bank</div>
+                                <div class="hero-metric-value" id="question-count-tertiary">0</div>
+                            </div>
+                            <div class="hero-metric">
+                                <div class="hero-metric-label">Modes</div>
+                                <div class="hero-metric-value">4+</div>
+                            </div>
+                            <div class="hero-metric">
+                                <div class="hero-metric-label">Core tools</div>
+                                <div class="hero-metric-value">8</div>
                             </div>
                         </div>
 
@@ -53,7 +68,7 @@
                             <div class="badge-ghost">Detailed solutions</div>
                             <div class="badge-ghost">Performance analytics</div>
                             <div class="badge-ghost">Smart filters</div>
-                            <div class="badge-ghost">Question history</div>
+                            <div class="badge-ghost">Duels + leaderboard</div>
                         </div>
 
                         <div class="hero-feature-stack mt-4">
@@ -149,8 +164,39 @@
                                         Stay on pace with guided sets built for your exam date.
                                     </div>
                                 </div>
+
+                                <div class="panel-mini-grid mt-4">
+                                    <a href="{% url 'progress_tracker' %}" class="panel-mini-card text-decoration-none">
+                                        <span class="panel-mini-label">Progress</span>
+                                        <span class="panel-mini-value">Tracker</span>
+                                    </a>
+                                    <a href="{% url 'duels_hub' %}" class="panel-mini-card text-decoration-none">
+                                        <span class="panel-mini-label">Live</span>
+                                        <span class="panel-mini-value">Duels</span>
+                                    </a>
+                                    <a href="{% url 'leaderboard' %}" class="panel-mini-card text-decoration-none">
+                                        <span class="panel-mini-label">Global</span>
+                                        <span class="panel-mini-value">Leaderboard</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="surface-section pt-4">
+            <div class="container">
+                <div class="brand-strip">
+                    <div class="brand-strip-title">Designed for focused students and fast revision cycles</div>
+                    <div class="brand-strip-items">
+                        <span>Question bank</span>
+                        <span>Practice engine</span>
+                        <span>Progress tracker</span>
+                        <span>Leaderboard</span>
+                        <span>Duels</span>
+                        <span>Chat support</span>
                     </div>
                 </div>
             </div>
@@ -218,8 +264,8 @@
                                 Log in to sync attempts, track accuracy over time, and unlock guided sets tailored to you.
                             </p>
                             <div class="d-flex gap-3">
-                                <a class="btn btn-light btn-lg shadow-sm" href="/login/">Log in</a>
-                                <a class="btn btn-outline-light btn-lg" href="/register/">Create account</a>
+                                <a class="btn btn-light btn-lg shadow-sm" href="{% url 'login' %}">Log in</a>
+                                <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create account</a>
                             </div>
                         </div>
                     </div>
@@ -264,6 +310,113 @@
                 </div>
             </div>
         </section>
+
+        <section class="surface-section section-tint">
+            <div class="container">
+                <div class="section-heading-wrap mb-4">
+                    <div class="section-kicker">Workflow</div>
+                    <h2 class="section-title">A clear prep cycle you can repeat daily</h2>
+                    <p class="section-copy">From topic selection to review, every step is connected so you spend less time navigating and more time improving.</p>
+                </div>
+                <div class="row g-3 g-lg-4">
+                    <div class="col-md-4">
+                        <div class="journey-card">
+                            <div class="journey-step">01</div>
+                            <h3>Pick a topic</h3>
+                            <p>Start in the question bank with tags, sessions, and subtopics that match your target paper.</p>
+                            <a href="{% url 'question_bank' %}" class="journey-link">Open question bank</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="journey-card">
+                            <div class="journey-step">02</div>
+                            <h3>Practice with intent</h3>
+                            <p>Switch between timed mode and review mode while saving key questions for your revision queue.</p>
+                            <a href="{% url 'practice_questions' %}" class="journey-link">Start practice</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="journey-card">
+                            <div class="journey-step">03</div>
+                            <h3>Review your performance</h3>
+                            <p>Use progress and leaderboard insights to focus on weak areas and maintain consistency.</p>
+                            <a href="{% url 'progress_tracker' %}" class="journey-link">View progress</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="surface-section">
+            <div class="container">
+                <div class="section-heading-wrap mb-4">
+                    <div class="section-kicker">Platform sections</div>
+                    <h2 class="section-title">Everything your current site already supports, surfaced clearly</h2>
+                </div>
+                <div class="row g-3 g-lg-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'question_bank' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Question Bank</span>
+                            <span class="module-copy">Browse by subject, session, and subtopic.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'practice_questions' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Practice</span>
+                            <span class="module-copy">Attempt questions with immediate feedback.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'progress_tracker' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Progress</span>
+                            <span class="module-copy">Track completion, streak, and topic growth.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'saved_questions' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Saved Questions</span>
+                            <span class="module-copy">Build a revision shortlist for quick review.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'leaderboard' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Leaderboard</span>
+                            <span class="module-copy">See top performers and benchmark pace.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'duels_hub' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Duels</span>
+                            <span class="module-copy">Compete in live challenge rounds.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'chat_room' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Chat</span>
+                            <span class="module-copy">Collaborate, ask, and share questions.</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a href="{% url 'report_bug' %}" class="module-card text-decoration-none">
+                            <span class="module-title">Support</span>
+                            <span class="module-copy">Report issues and keep the platform sharp.</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="home-final-cta mt-4 mt-lg-5">
+                    <div>
+                        <div class="section-kicker text-white-50">Ready to start?</div>
+                        <h3 class="mb-2">Turn daily practice into measurable progress.</h3>
+                        <p class="mb-0 text-white-75">Create an account and keep your full prep history in one place.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-light btn-lg" href="{% url 'register' %}">Create account</a>
+                        <a class="btn btn-outline-light btn-lg" href="{% url 'login' %}">Log in</a>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Bootstrap and scripts -->
@@ -287,13 +440,13 @@
             requestAnimationFrame(step);
         };
 
-        const primaryCountEl = document.getElementById('question-count');
-        const secondaryCountEl = document.getElementById('question-count-secondary');
+        const countTargets = [
+            document.getElementById('question-count'),
+            document.getElementById('question-count-secondary'),
+            document.getElementById('question-count-tertiary')
+        ].filter(Boolean);
 
-        if (primaryCountEl && secondaryCountEl) {
-            animateCount(primaryCountEl, questionCount);
-            animateCount(secondaryCountEl, questionCount);
-        }
+        countTargets.forEach((el) => animateCount(el, questionCount));
 
         const tiltCard = document.querySelector('[data-tilt]');
         if (tiltCard) {
