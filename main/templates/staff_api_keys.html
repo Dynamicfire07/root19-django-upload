@@ -1,0 +1,184 @@
+{% load static %}
+{% load tz %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Keys</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include '_app_styles.html' %}
+    {% include '_analytics_head.html' %}
+    {% include '_favicon.html' %}
+</head>
+<body class="stats-page">
+    {% include 'navbar.html' %}
+    <main class="py-4 py-md-5">
+        <div class="container">
+            <div class="bug-hero mb-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <div class="pill">Integration keys</div>
+                        <h1 class="mt-2 mb-1 fw-bold">API key control panel</h1>
+                        <p class="mb-0 text-white-75">Create keys for your external site and choose limited or unlimited usage.</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            {% if generated_key %}
+                <div class="alert alert-warning d-flex flex-column gap-2" role="alert">
+                    <div class="fw-semibold">Copy this API key now (shown once):</div>
+                    <code class="p-2 rounded bg-dark text-white">{{ generated_key }}</code>
+                </div>
+            {% endif %}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Create new key</h5>
+                    <form method="post" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create">
+
+                        <div class="col-md-5">
+                            <label class="form-label">Name</label>
+                            <input type="text" name="name" class="form-control" placeholder="New Website Key" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Mode</label>
+                            <select class="form-select" name="access_mode" id="accessModeSelect">
+                                {% for value, label in access_modes %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2" id="requestLimitWrap" style="display:none;">
+                            <label class="form-label">Request limit</label>
+                            <input type="number" name="request_limit" class="form-control" min="1" placeholder="1000">
+                        </div>
+
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Generate key</button>
+                        </div>
+                    </form>
+                    <div class="text-muted small mt-2">
+                        Limited keys stop working once usage reaches the set request limit. Unlimited keys have no usage cap.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="mb-3">Existing keys</h5>
+                    {% if api_keys %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Mode</th>
+                                        <th>Usage</th>
+                                        <th>Status</th>
+                                        <th>Key prefix</th>
+                                        <th>Created</th>
+                                        <th>Last used</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in api_keys %}
+                                        <tr>
+                                            <td>{{ item.id }}</td>
+                                            <td class="fw-semibold">{{ item.name }}</td>
+                                            <td>
+                                                {% if item.access_mode == "limited" %}
+                                                    <span class="badge bg-warning text-dark">Limited</span>
+                                                {% else %}
+                                                    <span class="badge bg-info text-dark">Unlimited</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ item.usage_count }}
+                                                {% if item.access_mode == "limited" and item.request_limit %}
+                                                    / {{ item.request_limit }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><code>{{ item.key_prefix }}</code></td>
+                                            <td class="text-muted small">{{ item.created_at|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST</td>
+                                            <td class="text-muted small">
+                                                {% if item.last_used_at %}
+                                                    {{ item.last_used_at|timezone:"Asia/Kolkata"|date:"Y-m-d H:i" }} IST
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <form method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="regenerate">
+                                                    <input type="hidden" name="key_id" value="{{ item.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">Regenerate</button>
+                                                </form>
+                                                <form method="post" class="d-inline ms-1">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="reset_usage">
+                                                    <input type="hidden" name="key_id" value="{{ item.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Reset usage</button>
+                                                </form>
+                                                <form method="post" class="d-inline ms-1">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="key_id" value="{{ item.id }}">
+                                                    {% if item.is_active %}
+                                                        <input type="hidden" name="action" value="deactivate">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                                                    {% else %}
+                                                        <input type="hidden" name="action" value="activate">
+                                                        <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                                    {% endif %}
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">No API keys yet. Create your first key above.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const modeSelect = document.getElementById("accessModeSelect");
+            const limitWrap = document.getElementById("requestLimitWrap");
+            if (!modeSelect || !limitWrap) return;
+
+            const refresh = () => {
+                const isLimited = modeSelect.value === "limited";
+                limitWrap.style.display = isLimited ? "" : "none";
+            };
+            modeSelect.addEventListener("change", refresh);
+            refresh();
+        })();
+    </script>
+</body>
+</html>

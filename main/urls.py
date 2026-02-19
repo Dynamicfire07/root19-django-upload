@@ -28,6 +28,7 @@ urlpatterns = [
     path('staff/reset-password/', views.staff_reset_password, name='staff_reset_password'),
     path('staff/password-requests/', views.staff_password_requests, name='staff_password_requests'),
     path('staff/theme-access/', views.staff_theme_access, name='staff_theme_access'),
+    path('staff/api-keys/', views.staff_api_keys, name='staff_api_keys'),
     path('report-bug/', views.report_bug, name='report_bug'),
     path('report-bug/thanks/', views.report_bug_thanks, name='report_bug_thanks'),
     path('staff/bugs/', views.staff_bug_list, name='staff_bug_list'),
@@ -45,4 +46,6 @@ urlpatterns = [
     path('api/duels/join/', views.api_join_duel, name='api_join_duel'),
     path('api/duels/<int:duel_id>/', views.api_duel_status, name='api_duel_status'),
     path('api/duels/<int:duel_id>/submit', views.api_duel_submit, name='api_duel_submit'),
+    path('api/questions/', views.api_questions, name='api_questions'),
+    path('api/questions/<str:question_id>/', views.api_question_detail, name='api_question_detail'),
 ]

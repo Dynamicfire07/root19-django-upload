@@ -6,8 +6,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.cache import cache
+from django.db.models import F
+from django.utils import timezone as django_timezone
 from datetime import datetime, timezone, timedelta
 import base64
+import hashlib
 from types import SimpleNamespace
 from django.utils.crypto import get_random_string
 import random
@@ -56,7 +59,7 @@ from .question_images import (
     apply_question_image_src_to_rows,
 )
 from .streaks import compute_streak, invalidate_streak_cache
-from .models import BugReport
+from .models import BugReport, APIKey
 
 CHAMPION_CACHE_KEY = "weekly_champion"
 CHAMPION_CACHE_TTL = 1800  # 30 minutes
@@ -73,6 +76,7 @@ _chat_table_ready = False
 _ping_table_ready = False
 _chat_lock_ready = False
 _CACHE_MISS = object()
+_question_columns_cache = None
 
 # -------------------------
 # AUTHENTICATION
@@ -1218,6 +1222,314 @@ def duel_play(request, duel_id: int):
 # API ENDPOINTS
 # -------------------------
 
+def _extract_api_key(request) -> str:
+    """Read API key from standard headers."""
+    # Query param support for clients that cannot set custom headers.
+    key_from_query = (
+        request.GET.get("api_key")
+        or request.GET.get("apikey")
+        or request.GET.get("key")
+        or ""
+    ).strip()
+    if key_from_query:
+        return key_from_query
+
+    direct = (request.headers.get("X-API-Key") or request.META.get("HTTP_X_API_KEY") or "").strip()
+    if direct:
+        return direct
+
+    auth_header = (request.headers.get("Authorization") or request.META.get("HTTP_AUTHORIZATION") or "").strip()
+    if not auth_header:
+        return ""
+
+    parts = auth_header.split(" ", 1)
+    if len(parts) == 2 and parts[0].strip().lower() in {"bearer", "api-key", "apikey", "token"}:
+        return parts[1].strip()
+    return ""
+
+
+def _require_api_key(request) -> _t.Optional[JsonResponse]:
+    """Validate API key for external API endpoints."""
+    raw_key = _extract_api_key(request)
+    if not raw_key:
+        return JsonResponse(
+            {"error": "API key required. Send X-API-Key header or Authorization: Bearer <key>."},
+            status=401,
+        )
+
+    key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    api_key = APIKey.objects.filter(key_hash=key_hash, is_active=True).first()
+    if not api_key:
+        return JsonResponse({"error": "Invalid API key."}, status=401)
+
+    now = django_timezone.now()
+    if api_key.expires_at and api_key.expires_at <= now:
+        return JsonResponse({"error": "API key has expired."}, status=401)
+
+    if (
+        api_key.access_mode == APIKey.ACCESS_MODE_LIMITED
+        and api_key.request_limit is not None
+        and api_key.usage_count >= api_key.request_limit
+    ):
+        return JsonResponse({"error": "API key request limit reached."}, status=401)
+
+    # Keep usage + last_used timestamp updated.
+    APIKey.objects.filter(pk=api_key.pk).update(last_used_at=now, usage_count=F("usage_count") + 1)
+
+    request.api_key = api_key
+    return None
+
+
+def _truthy_param(raw_val: _t.Any) -> bool:
+    """Parse common truthy query-parameter forms."""
+    return str(raw_val or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_int_param(raw_val: _t.Any, default: int, minimum: int, maximum: int) -> int:
+    """Safely parse and clamp integer query parameters."""
+    try:
+        parsed = int(raw_val)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(minimum, min(parsed, maximum))
+
+
+def _get_question_table_columns() -> set:
+    """Read questions table columns once for dynamic filtering support."""
+    global _question_columns_cache
+    if _question_columns_cache is not None:
+        return _question_columns_cache
+    rows = query_all(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'questions'
+          AND table_schema = current_schema()
+        ORDER BY ordinal_position
+        """
+    )
+    _question_columns_cache = {r.get("column_name") for r in rows if r.get("column_name")}
+    return _question_columns_cache
+
+
+def _build_absolute_image_link(request, image_url: _t.Optional[str], image_base64: _t.Optional[str]) -> _t.Optional[str]:
+    """Return an absolute URL-like image link when possible."""
+    image_src = build_question_image_src(image_url, image_base64)
+    if not image_src:
+        return None
+    if image_src.startswith(("http://", "https://", "data:")):
+        return image_src
+    if image_src.startswith("//"):
+        return f"{request.scheme}:{image_src}"
+    normalized = image_src if image_src.startswith("/") else f"/{image_src}"
+    return request.build_absolute_uri(normalized)
+
+
+def _serialize_question_api_row(request, row: dict) -> dict:
+    """Normalize outgoing question payload for external consumers."""
+    payload = dict(row or {})
+    payload["image_link"] = _build_absolute_image_link(
+        request,
+        payload.get("image_url"),
+        payload.get("image_base64"),
+    )
+    payload["image_src"] = payload["image_link"]
+    if not payload.get("question"):
+        payload["question"] = payload.get("extracted_text") or payload.get("file_question")
+    if not payload.get("question_type"):
+        payload["question_type"] = payload.get("subtopic")
+    if not payload.get("subject"):
+        payload["subject"] = payload.get("session") or label_session(str(payload.get("session_code") or ""))
+    return payload
+
+
+def _build_question_api_filters(request, available_columns: set) -> tuple[list[str], list]:
+    """Build SQL WHERE clauses from supported query parameters."""
+    eq_filters = (
+        ("question_id", "question_id"),
+        ("session_code", "session_code"),
+        ("session", "session"),
+        ("year", "year"),
+        ("paper_code", "paper_code"),
+        ("variant", "variant"),
+        ("subtopic", "subtopic"),
+        ("question_type", "question_type"),
+        ("answer", "answer"),
+    )
+    conditions = []
+    params = []
+
+    for param_name, column_name in eq_filters:
+        if column_name not in available_columns:
+            continue
+        raw_value = (request.GET.get(param_name) or "").strip()
+        if not raw_value:
+            continue
+
+        if column_name == "year":
+            try:
+                raw_value = int(raw_value)
+            except ValueError as exc:
+                raise ValueError("year must be an integer.") from exc
+
+        conditions.append(f"{column_name} = %s")
+        params.append(raw_value)
+
+    # subject is an alias mapped from session_code for known syllabus labels.
+    subject_value = (request.GET.get("subject") or "").strip()
+    if subject_value:
+        normalized_subject = subject_value.lower()
+        subject_to_code = {
+            label.strip().lower(): code
+            for code, label in SESSION_LABELS.items()
+        }
+
+        subject_code = subject_to_code.get(normalized_subject)
+        if not subject_code and subject_value.isdigit():
+            subject_code = subject_value.lstrip("0") or subject_value
+        if not subject_code:
+            direct_code = subject_value.lstrip("0") or subject_value
+            if direct_code in SESSION_LABELS:
+                subject_code = direct_code
+
+        if subject_code and "session_code" in available_columns:
+            conditions.append("session_code = %s")
+            params.append(subject_code)
+        elif "subject" in available_columns:
+            conditions.append("subject = %s")
+            params.append(subject_value)
+        else:
+            valid_subjects = ", ".join(sorted(set(SESSION_LABELS.values())))
+            raise ValueError(f"Invalid subject. Use one of: {valid_subjects}.")
+
+    search_term = (request.GET.get("q") or "").strip()
+    if search_term:
+        searchable_columns = [
+            "question_id",
+            "session_code",
+            "session",
+            "year",
+            "paper_code",
+            "variant",
+            "subtopic",
+            "subject",
+            "question_type",
+            "file_question",
+            "extracted_text",
+            "answer",
+            "image_key",
+            "image_url",
+        ]
+        active_search_columns = [c for c in searchable_columns if c in available_columns]
+        if active_search_columns:
+            search_sql = " OR ".join(f"CAST({col} AS TEXT) ILIKE %s" for col in active_search_columns)
+            conditions.append(f"({search_sql})")
+            params.extend([f"%{search_term}%"] * len(active_search_columns))
+
+    return conditions, params
+
+
+def api_questions(request):
+    """
+    List question records with full database fields and a frontend-ready image link.
+
+    Query params:
+    - q: text search over major fields
+    - question_id, session_code, session, year, paper_code, variant, subtopic, subject, question_type, answer
+    - limit (default 50, max 500), offset (default 0)
+    - order_by (column), sort (asc|desc)
+    - include_image_base64 (1/0, defaults to 1)
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    auth_error = _require_api_key(request)
+    if auth_error:
+        return auth_error
+    ensure_question_image_columns()
+
+    available_columns = _get_question_table_columns()
+
+    try:
+        conditions, params = _build_question_api_filters(request, available_columns)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    limit = _parse_int_param(request.GET.get("limit"), default=50, minimum=1, maximum=500)
+    offset = _parse_int_param(request.GET.get("offset"), default=0, minimum=0, maximum=1_000_000)
+    include_image_base64 = _truthy_param(request.GET.get("include_image_base64", "1"))
+
+    if "question_id" in available_columns:
+        default_order = "question_id"
+    elif "year" in available_columns:
+        default_order = "year"
+    elif available_columns:
+        default_order = sorted(available_columns)[0]
+    else:
+        return JsonResponse({"error": "Questions table columns are unavailable."}, status=500)
+
+    order_by = (request.GET.get("order_by") or default_order).strip()
+    if order_by not in available_columns:
+        order_by = default_order
+    sort_direction = (request.GET.get("sort") or "asc").strip().lower()
+    if sort_direction not in {"asc", "desc"}:
+        sort_direction = "asc"
+
+    where_sql = " AND ".join(conditions) if conditions else "TRUE"
+
+    count_row = query_one(
+        f"SELECT COUNT(*) AS cnt FROM questions WHERE {where_sql}",
+        tuple(params),
+    ) or {"cnt": 0}
+
+    rows = query_all(
+        f"""
+        SELECT q.*
+        FROM questions q
+        WHERE {where_sql}
+        ORDER BY {order_by} {sort_direction}
+        LIMIT %s OFFSET %s
+        """,
+        tuple(params + [limit, offset]),
+    )
+
+    results = []
+    for row in rows:
+        payload = _serialize_question_api_row(request, row)
+        if not include_image_base64:
+            payload["image_base64"] = None
+        results.append(payload)
+
+    return JsonResponse(
+        {
+            "count": int(count_row.get("cnt", 0) or 0),
+            "limit": limit,
+            "offset": offset,
+            "returned": len(results),
+            "results": results,
+        }
+    )
+
+
+def api_question_detail(request, question_id: str):
+    """Return one question record with all fields and normalized image link."""
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    auth_error = _require_api_key(request)
+    if auth_error:
+        return auth_error
+    ensure_question_image_columns()
+
+    row = query_one("SELECT * FROM questions WHERE question_id = %s", (question_id,))
+    if not row:
+        return JsonResponse({"error": "Question not found."}, status=404)
+
+    payload = _serialize_question_api_row(request, row)
+    include_image_base64 = _truthy_param(request.GET.get("include_image_base64", "1"))
+    if not include_image_base64:
+        payload["image_base64"] = None
+    return JsonResponse(payload)
+
+
 @csrf_exempt
 def check_answer(request):
     """Check if a submitted answer is correct."""
@@ -1910,6 +2222,95 @@ def staff_theme_access(request):
         """
     )
     return render(request, "staff_theme_access.html", {"users": users})
+
+
+@staff_member_required
+def staff_api_keys(request):
+    """Manage API keys from custom staff panel (outside Django admin)."""
+    generated_key = request.session.pop("staff_api_generated_key", None)
+    access_mode_values = {choice[0] for choice in APIKey.ACCESS_MODE_CHOICES}
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip().lower()
+
+        if action == "create":
+            name = (request.POST.get("name") or "").strip()
+            access_mode = (request.POST.get("access_mode") or APIKey.ACCESS_MODE_UNLIMITED).strip().lower()
+            request_limit_raw = (request.POST.get("request_limit") or "").strip()
+            request_limit = None
+
+            if access_mode not in access_mode_values:
+                messages.error(request, "Invalid API key mode.")
+                return redirect("staff_api_keys")
+
+            if access_mode == APIKey.ACCESS_MODE_LIMITED:
+                try:
+                    request_limit = int(request_limit_raw)
+                except (TypeError, ValueError):
+                    request_limit = 0
+                if request_limit <= 0:
+                    messages.error(request, "For limited keys, request limit must be a number greater than 0.")
+                    return redirect("staff_api_keys")
+
+            raw_key = APIKey.generate_raw_key()
+            api_key = APIKey(
+                name=name or "External API Key",
+                access_mode=access_mode,
+                request_limit=request_limit if access_mode == APIKey.ACCESS_MODE_LIMITED else None,
+                is_active=True,
+            )
+            api_key.set_raw_key(raw_key)
+            api_key.save()
+            request.session["staff_api_generated_key"] = raw_key
+            messages.success(request, f"API key '{api_key.name}' created.")
+            return redirect("staff_api_keys")
+
+        key_id = request.POST.get("key_id")
+        api_key = APIKey.objects.filter(id=key_id).first()
+        if not api_key:
+            messages.error(request, "API key not found.")
+            return redirect("staff_api_keys")
+
+        if action == "regenerate":
+            raw_key = APIKey.generate_raw_key()
+            api_key.set_raw_key(raw_key)
+            api_key.usage_count = 0
+            api_key.save(update_fields=["key_hash", "key_prefix", "usage_count"])
+            request.session["staff_api_generated_key"] = raw_key
+            messages.success(request, f"API key '{api_key.name}' regenerated.")
+            return redirect("staff_api_keys")
+
+        if action == "activate":
+            api_key.is_active = True
+            api_key.save(update_fields=["is_active"])
+            messages.success(request, f"API key '{api_key.name}' activated.")
+            return redirect("staff_api_keys")
+
+        if action == "deactivate":
+            api_key.is_active = False
+            api_key.save(update_fields=["is_active"])
+            messages.success(request, f"API key '{api_key.name}' deactivated.")
+            return redirect("staff_api_keys")
+
+        if action == "reset_usage":
+            api_key.usage_count = 0
+            api_key.save(update_fields=["usage_count"])
+            messages.success(request, f"Usage reset for API key '{api_key.name}'.")
+            return redirect("staff_api_keys")
+
+        messages.error(request, "Invalid action.")
+        return redirect("staff_api_keys")
+
+    keys = APIKey.objects.order_by("-created_at")
+    return render(
+        request,
+        "staff_api_keys.html",
+        {
+            "api_keys": keys,
+            "generated_key": generated_key,
+            "access_modes": APIKey.ACCESS_MODE_CHOICES,
+        },
+    )
 
 
 # -------------------------

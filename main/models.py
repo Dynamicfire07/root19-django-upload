@@ -1,4 +1,6 @@
 from django.db import models
+import hashlib
+import secrets
 
 
 class Question(models.Model):
@@ -72,3 +74,48 @@ class BugReport(models.Model):
 
     def __str__(self):
         return f"[{self.severity.upper()}] {self.title}"
+
+
+class APIKey(models.Model):
+    ACCESS_MODE_UNLIMITED = "unlimited"
+    ACCESS_MODE_LIMITED = "limited"
+    ACCESS_MODE_CHOICES = [
+        (ACCESS_MODE_UNLIMITED, "Unlimited"),
+        (ACCESS_MODE_LIMITED, "Limited"),
+    ]
+
+    name = models.CharField(max_length=120)
+    key_prefix = models.CharField(max_length=16, db_index=True, editable=False)
+    key_hash = models.CharField(max_length=64, unique=True, editable=False)
+    access_mode = models.CharField(max_length=20, choices=ACCESS_MODE_CHOICES, default=ACCESS_MODE_UNLIMITED)
+    request_limit = models.PositiveIntegerField(blank=True, null=True)
+    usage_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "api_keys"
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        label = self.name or self.key_prefix
+        status = "active" if self.is_active else "inactive"
+        return f"{label} ({status})"
+
+    @staticmethod
+    def generate_raw_key() -> str:
+        return f"r19_{secrets.token_urlsafe(32)}"
+
+    @staticmethod
+    def hash_key(raw_key: str) -> str:
+        return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+    def set_raw_key(self, raw_key: str) -> None:
+        normalized = (raw_key or "").strip()
+        if not normalized:
+            raise ValueError("API key cannot be empty.")
+        self.key_hash = self.hash_key(normalized)
+        self.key_prefix = normalized[:16]

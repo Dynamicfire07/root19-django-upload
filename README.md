@@ -68,3 +68,25 @@ python manage.py backfill_question_images
    ```bash
    git clone https://github.com/your-repo/quiz-app.git
    cd quiz-app
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run migrations:
+   ```bash
+   python manage.py migrate
+   ```
+
+4. Start server:
+   ```bash
+   python manage.py runserver
+   ```
+
+## API Documentation
+
+For API usage, authentication, filters, and subject options, see:
+
+- `docs/API_DOCUMENTATION.md`

@@ -241,3 +241,48 @@ class CheckAnswerTests(SimpleTestCase):
         response = views.check_answer(request)
         body = json.loads(response.content.decode("utf-8"))
         self.assertFalse(body["is_correct"])
+
+
+class APIKeyProtectionTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_api_questions_requires_api_key(self):
+        request = self.factory.get("/api/questions/")
+        response = views.api_questions(request)
+        self.assertEqual(response.status_code, 401)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertIn("API key required", body.get("error", ""))
+
+    def test_api_question_detail_requires_api_key(self):
+        request = self.factory.get("/api/questions/Q1/")
+        response = views.api_question_detail(request, "Q1")
+        self.assertEqual(response.status_code, 401)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertIn("API key required", body.get("error", ""))
+
+
+class QuestionFilterSubjectTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_subject_label_maps_to_session_code(self):
+        request = self.factory.get("/api/questions/?subject=Physics")
+        conditions, params = views._build_question_api_filters(request, {"session_code"})
+        self.assertIn("session_code = %s", conditions)
+        self.assertIn("625", params)
+
+    def test_invalid_subject_raises_error(self):
+        request = self.factory.get("/api/questions/?subject=Astronomy")
+        with self.assertRaises(ValueError):
+            views._build_question_api_filters(request, {"session_code"})
+
+
+class APIKeyExtractionTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_extract_api_key_from_query_param(self):
+        request = self.factory.get("/api/questions/?api_key=r19_test_query")
+        parsed = views._extract_api_key(request)
+        self.assertEqual(parsed, "r19_test_query")
