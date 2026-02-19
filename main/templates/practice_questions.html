@@ -162,10 +162,12 @@
             <div class="question question-container" 
                  data-question-id="{{ question.question_id }}" 
                  data-answer="{{ question.answer }}" 
-                 data-image="{{ question.image_base64 }}"
+                 data-image-src="{{ question.image_src|default:'' }}"
                  style="display: none;">
-                <img src="data:image/png;base64,{{ question.image_base64 }}" 
+                {% if question.image_src %}
+                <img src="{{ question.image_src }}" 
                      alt="Question Image" class="mb-4">
+                {% endif %}
                 <div class="button-group">
                     <button class="side-button star" title="Star"><i class="bi bi-star-fill"></i></button>
                     <button class="side-button bookmark" title="Bookmark"><i class="bi bi-bookmark-fill"></i></button>
@@ -302,12 +304,12 @@
                     return;
                 }
                 const q = btn.closest('.question');
-                const imgData = q.dataset.image || "";
+                const imgData = q.dataset.imageSrc || "";
                 const qid = q.dataset.questionId;
                 shareQuestionId.value = qid;
                 shareMessage.value = "";
                 shareStatus.textContent = "";
-                sharePreview.src = imgData ? `data:image/png;base64,${imgData}` : "";
+                sharePreview.src = imgData || "";
                 if (shareModal) shareModal.show();
             });
         });

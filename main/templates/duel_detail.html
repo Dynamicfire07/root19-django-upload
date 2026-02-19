@@ -225,9 +225,10 @@
         header.appendChild(correct);
         row.appendChild(header);
 
-        if (item.image_base64) {
+        const comparisonImageSrc = item.image_src || (item.image_base64 ? `data:image/png;base64,${item.image_base64}` : '');
+        if (comparisonImageSrc) {
           const img = document.createElement('img');
-          img.src = `data:image/png;base64,${item.image_base64}`;
+          img.src = comparisonImageSrc;
           img.alt = 'Question image';
           img.className = 'img-fluid rounded mt-2';
           row.appendChild(img);
@@ -320,8 +321,9 @@
       currentQuestion = questions[currentIndex];
       questionMeta.textContent = `${currentQuestion.session_code || ''} • ${currentQuestion.subtopic || ''} (Q${currentIndex + 1} of ${questions.length})`;
       questionText.textContent = currentQuestion.extracted_text || 'Question';
-      if (currentQuestion.image_base64) {
-        questionImage.src = `data:image/png;base64,${currentQuestion.image_base64}`;
+      const questionImageSrc = currentQuestion.image_src || (currentQuestion.image_base64 ? `data:image/png;base64,${currentQuestion.image_base64}` : '');
+      if (questionImageSrc) {
+        questionImage.src = questionImageSrc;
         questionImage.classList.remove('d-none');
       } else {
         questionImage.classList.add('d-none');

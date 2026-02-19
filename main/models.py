@@ -12,6 +12,8 @@ class Question(models.Model):
     subtopic = models.CharField(max_length=255)
     extracted_text = models.TextField()
     image_base64 = models.TextField()
+    image_key = models.TextField(blank=True, null=True)
+    image_url = models.TextField(blank=True, null=True)
     answer = models.TextField()
 
     class Meta:

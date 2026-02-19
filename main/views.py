@@ -50,6 +50,11 @@ from .db import (
     get_next_user_id,
     get_or_create_activity,
 )
+from .question_images import (
+    ensure_question_image_columns,
+    build_question_image_src,
+    apply_question_image_src_to_rows,
+)
 from .streaks import compute_streak, invalidate_streak_cache
 from .models import BugReport
 
@@ -562,10 +567,11 @@ def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list
     question_ids = _parse_json_field(duel.get("question_ids"), [])
     if not question_ids:
         return []
+    ensure_question_image_columns()
 
     rows = query_all(
         """
-        SELECT question_id, extracted_text, session_code, subtopic, image_base64, answer
+        SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_url, answer
         FROM questions WHERE question_id = ANY(%s)
         """,
         (question_ids,),
@@ -597,6 +603,7 @@ def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list
             return (str(answer_val) or "").strip().lower() == correct_norm
 
         saved_meta = saved.get(qid, {})
+        image_src = build_question_image_src(meta.get("image_url"), meta.get("image_base64"))
         comparison.append(
             {
                 "order": idx,
@@ -604,7 +611,9 @@ def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list
                 "text": meta.get("extracted_text"),
                 "session_code": meta.get("session_code"),
                 "subtopic": meta.get("subtopic"),
+                "image_url": meta.get("image_url"),
                 "image_base64": meta.get("image_base64"),
+                "image_src": image_src,
                 "correct_answer": correct_answer,
                 "creator_answer": creator_answer,
                 "opponent_answer": opponent_answer,
@@ -735,6 +744,7 @@ def get_subtopics(request):
 
 def practice_questions(request):
     """Render practice questions with flexible filtering and random ordering."""
+    ensure_question_image_columns()
     session_code = (request.GET.get('session_code') or "").strip()
     subtopic = (request.GET.get('subtopic') or "").strip()
     limit_override = request.GET.get('limit')
@@ -756,7 +766,7 @@ def practice_questions(request):
 
     docs = query_all(
         f"""
-        SELECT question_id, image_base64, answer, session_code, subtopic
+        SELECT question_id, image_base64, image_url, answer, session_code, subtopic
         FROM questions
         WHERE {where_sql}
         ORDER BY RANDOM()
@@ -764,6 +774,7 @@ def practice_questions(request):
         """,
         tuple(params + [limit]),
     )
+    apply_question_image_src_to_rows(docs)
 
     user_id = request.session.get('user_id') or ""
     guest_limit = None
@@ -1096,6 +1107,7 @@ def save_progress(request):
 
 def saved_questions(request):
     """Practice bookmarked/starred questions quickly."""
+    ensure_question_image_columns()
     user_id = request.session.get("user_id")
     if not user_id:
         messages.info(request, "Please log in to view saved questions.")
@@ -1103,7 +1115,7 @@ def saved_questions(request):
 
     saved = query_all(
         """
-        SELECT q.question_id, q.image_base64, q.answer, q.session_code, q.subtopic,
+        SELECT q.question_id, q.image_base64, q.image_url, q.answer, q.session_code, q.subtopic,
                ua.bookmarked, ua.starred, ua.time_started
         FROM user_activity ua
         JOIN questions q ON q.question_id = ua.question_id
@@ -1112,6 +1124,7 @@ def saved_questions(request):
         """,
         (user_id,),
     )
+    apply_question_image_src_to_rows(saved)
 
     return render(request, "saved_questions.html", {"saved": saved, "user_id": user_id})
 
@@ -1145,6 +1158,7 @@ def duels_hub(request):
 def duel_play(request, duel_id: int):
     """Display a duel session with the shared question set."""
     ensure_duel_tables()
+    ensure_question_image_columns()
     duel = query_one("SELECT * FROM duels WHERE id = %s", (duel_id,))
     if not duel:
         messages.error(request, "Duel not found.")
@@ -1164,7 +1178,7 @@ def duel_play(request, duel_id: int):
     if question_ids:
         rows = query_all(
             """
-            SELECT question_id, extracted_text, session_code, subtopic, image_base64
+            SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_url
             FROM questions WHERE question_id = ANY(%s)
             """,
             (question_ids,),
@@ -1172,6 +1186,7 @@ def duel_play(request, duel_id: int):
         # Preserve order based on question_ids
         order = {qid: idx for idx, qid in enumerate(question_ids)}
         rows.sort(key=lambda r: order.get(r["question_id"], 0))
+        apply_question_image_src_to_rows(rows)
         questions = rows
 
     serialized_duel = _serialize_duel(duel)
@@ -2004,6 +2019,7 @@ def chat_share_question(request):
     """Share a question image + optional note into community chat."""
     ensure_chat_table()
     ensure_ping_table()
+    ensure_question_image_columns()
     lock = get_chat_lock()
     user_id = request.session.get("user_id")
     if not user_id:
@@ -2029,19 +2045,18 @@ def chat_share_question(request):
         return JsonResponse({"error": "Message too long (max 1000 characters)."}, status=400)
 
     question = query_one(
-        "SELECT question_id, image_base64 FROM questions WHERE question_id = %s",
+        "SELECT question_id, image_base64, image_url FROM questions WHERE question_id = %s",
         (question_id,),
     )
     if not question:
         return JsonResponse({"error": "Question not found."}, status=404)
 
-    image_b64 = question.get("image_base64")
-    data_uri = f"data:image/png;base64,{image_b64}" if image_b64 else None
+    image_src = build_question_image_src(question.get("image_url"), question.get("image_base64"))
     body = message_body or f"Shared question {question_id}"
 
     execute(
         "INSERT INTO chat_messages (user_id, body, image_base64) VALUES (%s, %s, %s)",
-        (user_id, body, data_uri),
+        (user_id, body, image_src),
     )
     return JsonResponse({"status": "ok"})
 

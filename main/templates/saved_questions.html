@@ -149,14 +149,16 @@
         {% if saved %}
         <div id="question-container">
             {% for q in saved %}
-            <div class="question question-container" 
-                 data-question-id="{{ q.question_id }}" 
-                 data-answer="{{ q.answer }}" 
-                 data-bookmarked="{{ q.bookmarked|yesno:'true,false' }}"
-                 data-starred="{{ q.starred|yesno:'true,false' }}"
-                 style="display: none;">
-                <img src="data:image/png;base64,{{ q.image_base64 }}" 
+                <div class="question question-container" 
+                     data-question-id="{{ q.question_id }}" 
+                     data-answer="{{ q.answer }}" 
+                     data-bookmarked="{{ q.bookmarked|yesno:'true,false' }}"
+                     data-starred="{{ q.starred|yesno:'true,false' }}"
+                     style="display: none;">
+                {% if q.image_src %}
+                <img src="{{ q.image_src }}" 
                      alt="Question Image" class="mb-4">
+                {% endif %}
                 <div class="button-group">
                     <button class="side-button star {% if q.starred %}active{% endif %}" title="Star"><i class="bi bi-star-fill"></i></button>
                     <button class="side-button bookmark {% if q.bookmarked %}active{% endif %}" title="Bookmark"><i class="bi bi-bookmark-fill"></i></button>

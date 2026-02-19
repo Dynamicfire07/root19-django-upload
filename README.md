@@ -44,6 +44,24 @@ Make sure you have the following installed:
 - PostgreSQL server (Supabase)
 - psycopg2-binary
 
+## Question Image Storage (CDN)
+
+Question images can be delivered from Supabase Storage instead of inline Base64.
+
+Set these environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_STORAGE_BUCKET`
+- `SUPABASE_STORAGE_PUBLIC_BASE_URL` (optional override)
+
+Backfill existing question images:
+
+```bash
+python manage.py backfill_question_images --dry-run
+python manage.py backfill_question_images
+```
+
 ## Installation
 
 1. Clone the repository:

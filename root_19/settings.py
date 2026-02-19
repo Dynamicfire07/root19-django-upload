@@ -120,6 +120,12 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
+# Supabase Storage (questions images)
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_STORAGE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "")
+SUPABASE_STORAGE_PUBLIC_BASE_URL = os.getenv("SUPABASE_STORAGE_PUBLIC_BASE_URL", "").rstrip("/")
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

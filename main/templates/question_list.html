@@ -87,7 +87,11 @@
                             <td>{{ question.paper_code }}</td>
                             <td>{{ question.variant }}</td>
                             <td>{{ question.subtopic }}</td>
-                            <td><img src="data:image/png;base64,{{ question.image_base64 }}" alt="Question Image" width="100"></td>
+                            <td>
+                                {% if question.image_src %}
+                                <img src="{{ question.image_src }}" alt="Question Image" width="100">
+                                {% endif %}
+                            </td>
                             <td>{{ question.answer }}</td>
                         </tr>
                         {% endfor %}
