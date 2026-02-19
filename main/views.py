@@ -68,6 +68,8 @@ TOTAL_QUESTIONS_TTL = 300  # 5 minutes
 SESSION_OPTIONS_CACHE_KEY = "session_options"
 SESSION_OPTIONS_TTL = 600  # 10 minutes
 SUBTOPIC_CACHE_TTL = 600
+API_OPTIONS_CACHE_KEY = "api_options_reference"
+API_OPTIONS_TTL = 600
 PRACTICE_QUESTION_LIMIT = 40  # cap to avoid loading all questions at once
 
 _study_progress_ready = False
@@ -728,6 +730,75 @@ def question_bank(request):
     return render(request, 'question_bank.html', {'session_options': session_options})
 
 
+def api_options_reference(request):
+    """URL-only reference page with all available API filter options."""
+    cached = cache.get(API_OPTIONS_CACHE_KEY, _CACHE_MISS)
+    if cached is _CACHE_MISS:
+        session_code_rows = query_all("SELECT DISTINCT session_code FROM questions ORDER BY session_code")
+        session_rows = query_all("SELECT DISTINCT session FROM questions ORDER BY session")
+        year_rows = query_all("SELECT DISTINCT year FROM questions ORDER BY year DESC")
+        paper_code_rows = query_all("SELECT DISTINCT paper_code FROM questions ORDER BY paper_code")
+        variant_rows = query_all("SELECT DISTINCT variant FROM questions ORDER BY variant")
+        answer_rows = query_all("SELECT DISTINCT answer FROM questions ORDER BY answer")
+        subtopic_rows = query_all("SELECT DISTINCT subtopic FROM questions ORDER BY subtopic")
+
+        session_codes = [str(row.get("session_code") or "") for row in session_code_rows if row.get("session_code") is not None]
+        session_values = [str(row.get("session") or "") for row in session_rows if row.get("session")]
+        year_values = [int(row.get("year")) for row in year_rows if row.get("year") is not None]
+        paper_codes = [str(row.get("paper_code") or "") for row in paper_code_rows if row.get("paper_code")]
+        variants = [str(row.get("variant") or "") for row in variant_rows if row.get("variant")]
+        answers = [str(row.get("answer") or "") for row in answer_rows if row.get("answer")]
+        subtopics = [str(row.get("subtopic") or "") for row in subtopic_rows if row.get("subtopic")]
+
+        subject_options = []
+        for code in session_codes:
+            subject_options.append(
+                {
+                    "subject": label_session(code),
+                    "session_code": code,
+                    "display_code": display_session_code(code),
+                }
+            )
+
+        query_params = [
+            {"name": "api_key", "description": "API key in URL (fallback when header control is not available)."},
+            {"name": "q", "description": "Text search across major fields."},
+            {"name": "question_id", "description": "Exact question id match."},
+            {"name": "subject", "description": "Biology/Chemistry/Physics or session code alias (610/620/625)."},
+            {"name": "session_code", "description": "Exact syllabus code filter."},
+            {"name": "session", "description": "Exam session (e.g., Oct/Nov)."},
+            {"name": "year", "description": "Exam year (integer)."},
+            {"name": "paper_code", "description": "Exact paper code filter."},
+            {"name": "variant", "description": "Exact variant filter."},
+            {"name": "subtopic", "description": "Exact subtopic filter."},
+            {"name": "question_type", "description": "Alias filter (same values as subtopic)."},
+            {"name": "answer", "description": "Exact answer filter."},
+            {"name": "limit", "description": "Page size (default 50, max 500)."},
+            {"name": "offset", "description": "Pagination offset."},
+            {"name": "order_by", "description": "Sort column name from questions table."},
+            {"name": "sort", "description": "Sort direction: asc or desc."},
+            {"name": "include_image_base64", "description": "1 to include base64; 0 to exclude heavy payload."},
+        ]
+
+        cached = {
+            "subject_options": subject_options,
+            "session_codes": session_codes,
+            "sessions": session_values,
+            "years": year_values,
+            "paper_codes": paper_codes,
+            "variants": variants,
+            "answers": answers,
+            "subtopics": subtopics,
+            "query_params": query_params,
+            "order_by_options": sorted(_get_question_table_columns()),
+            "subtopic_count": len(subtopics),
+            "reference_url": request.build_absolute_uri("/api/questions/"),
+        }
+        cache.set(API_OPTIONS_CACHE_KEY, cached, API_OPTIONS_TTL)
+
+    return render(request, "api_options_reference.html", cached)
+
+
 def get_subtopics(request):
     """Return subtopics for a given session code."""
     session_code = request.GET.get('session_code')
@@ -1343,6 +1414,28 @@ def _serialize_question_api_row(request, row: dict) -> dict:
     return payload
 
 
+def _resolve_subject_to_session_code(subject_value: str) -> _t.Optional[str]:
+    """Map subject label/code input to canonical session code."""
+    raw = (subject_value or "").strip()
+    if not raw:
+        return None
+
+    normalized_subject = raw.lower()
+    subject_to_code = {
+        label.strip().lower(): code
+        for code, label in SESSION_LABELS.items()
+    }
+    if normalized_subject in subject_to_code:
+        return subject_to_code[normalized_subject]
+
+    if raw.isdigit():
+        normalized_code = raw.lstrip("0") or raw
+        if normalized_code in SESSION_LABELS:
+            return normalized_code
+
+    return None
+
+
 def _build_question_api_filters(request, available_columns: set) -> tuple[list[str], list]:
     """Build SQL WHERE clauses from supported query parameters."""
     eq_filters = (
@@ -1378,19 +1471,7 @@ def _build_question_api_filters(request, available_columns: set) -> tuple[list[s
     # subject is an alias mapped from session_code for known syllabus labels.
     subject_value = (request.GET.get("subject") or "").strip()
     if subject_value:
-        normalized_subject = subject_value.lower()
-        subject_to_code = {
-            label.strip().lower(): code
-            for code, label in SESSION_LABELS.items()
-        }
-
-        subject_code = subject_to_code.get(normalized_subject)
-        if not subject_code and subject_value.isdigit():
-            subject_code = subject_value.lstrip("0") or subject_value
-        if not subject_code:
-            direct_code = subject_value.lstrip("0") or subject_value
-            if direct_code in SESSION_LABELS:
-                subject_code = direct_code
+        subject_code = _resolve_subject_to_session_code(subject_value)
 
         if subject_code and "session_code" in available_columns:
             conditions.append("session_code = %s")
@@ -1427,6 +1508,111 @@ def _build_question_api_filters(request, available_columns: set) -> tuple[list[s
             params.extend([f"%{search_term}%"] * len(active_search_columns))
 
     return conditions, params
+
+
+def api_subtopics(request):
+    """
+    Return all distinct subtopics for import flows.
+
+    Query params:
+    - subject (Biology/Chemistry/Physics or 610/620/625)
+    - session_code
+    - session
+    - q (subtopic search)
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed."}, status=405)
+    auth_error = _require_api_key(request)
+    if auth_error:
+        return auth_error
+
+    available_columns = _get_question_table_columns()
+    if "subtopic" not in available_columns:
+        return JsonResponse({"error": "Subtopic field is unavailable."}, status=500)
+
+    conditions = []
+    params = []
+
+    raw_subject = (request.GET.get("subject") or "").strip()
+    raw_session_code = (request.GET.get("session_code") or "").strip()
+    raw_session = (request.GET.get("session") or "").strip()
+    search_q = (request.GET.get("q") or "").strip()
+
+    if raw_subject:
+        subject_code = _resolve_subject_to_session_code(raw_subject)
+        if not subject_code:
+            valid_subjects = ", ".join(sorted(set(SESSION_LABELS.values())))
+            return JsonResponse({"error": f"Invalid subject. Use one of: {valid_subjects}."}, status=400)
+        if "session_code" in available_columns:
+            conditions.append("session_code = %s")
+            params.append(subject_code)
+
+    if raw_session_code and "session_code" in available_columns:
+        normalized_code = raw_session_code.lstrip("0") or raw_session_code
+        if raw_session_code.isdigit() and normalized_code in SESSION_LABELS:
+            conditions.append("session_code = %s")
+            params.append(normalized_code)
+        else:
+            conditions.append("session_code = %s")
+            params.append(raw_session_code)
+
+    if raw_session and "session" in available_columns:
+        conditions.append("session = %s")
+        params.append(raw_session)
+
+    if search_q:
+        conditions.append("subtopic ILIKE %s")
+        params.append(f"%{search_q}%")
+
+    where_sql = " AND ".join(conditions) if conditions else "TRUE"
+    rows = query_all(
+        f"""
+        SELECT DISTINCT session_code, subtopic
+        FROM questions
+        WHERE {where_sql}
+        ORDER BY session_code, subtopic
+        """,
+        tuple(params),
+    )
+
+    grouped = {}
+    for row in rows:
+        code = str(row.get("session_code") or "")
+        subtopic = str(row.get("subtopic") or "").strip()
+        if not subtopic:
+            continue
+        if code not in grouped:
+            grouped[code] = {
+                "session_code": code,
+                "display_code": display_session_code(code),
+                "subject": label_session(code),
+                "subtopics": [],
+            }
+        grouped[code]["subtopics"].append(subtopic)
+
+    by_session_code = list(grouped.values())
+    all_subtopics = sorted(
+        {
+            item
+            for group in by_session_code
+            for item in group.get("subtopics", [])
+            if item
+        }
+    )
+
+    return JsonResponse(
+        {
+            "count": len(all_subtopics),
+            "subtopics": all_subtopics,
+            "by_session_code": by_session_code,
+            "filters": {
+                "subject": raw_subject or None,
+                "session_code": raw_session_code or None,
+                "session": raw_session or None,
+                "q": search_q or None,
+            },
+        }
+    )
 
 
 def api_questions(request):

@@ -1,0 +1,216 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Options Reference</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include '_app_styles.html' %}
+    {% include '_analytics_head.html' %}
+    {% include '_favicon.html' %}
+    <style>
+        .api-ref-hero { background: linear-gradient(140deg,#0f172a,#1e3a8a); color:#fff; border-radius:16px; padding:1.35rem; box-shadow:0 1rem 2rem rgba(0,0,0,.14); }
+        .api-ref-pill { display:inline-block; font-size:.8rem; border-radius:999px; padding:.35rem .7rem; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2); }
+        .option-chip { display:inline-flex; align-items:center; border-radius:999px; padding:.35rem .7rem; margin:.2rem; background:#f3f4f6; border:1px solid #e5e7eb; font-size:.85rem; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .sticky-top-lite { position: sticky; top: 88px; z-index: 10; }
+    </style>
+</head>
+<body class="stats-page">
+    {% include 'navbar.html' %}
+    <main class="py-4 py-md-5">
+        <div class="container">
+            <div class="api-ref-hero mb-3">
+                <div class="api-ref-pill">URL-only reference page</div>
+                <h1 class="h3 mt-2 mb-1 fw-bold">API filter options reference</h1>
+                <p class="mb-0 text-white-75">
+                    This page is intentionally not linked in navbar menus. Use this URL directly to view all available filter options.
+                </p>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="fw-semibold mb-1">Questions endpoint</div>
+                    <div class="mono text-break">{{ reference_url }}</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="mb-2">Subject options</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>session_code</th>
+                                            <th>display</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in subject_options %}
+                                            <tr>
+                                                <td>{{ item.subject }}</td>
+                                                <td class="mono">{{ item.session_code }}</td>
+                                                <td class="mono">{{ item.display_code }}</td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr><td colspan="3" class="text-muted">No subject options found.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="mb-2">Query parameters</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Param</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for param in query_params %}
+                                            <tr>
+                                                <td class="mono">{{ param.name }}</td>
+                                                <td>{{ param.description }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="mb-2">session_code</h6>
+                            {% for item in session_codes %}
+                                <span class="option-chip mono">{{ item }}</span>
+                            {% empty %}
+                                <div class="text-muted small">No options found.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="mb-2">session</h6>
+                            {% for item in sessions %}
+                                <span class="option-chip">{{ item }}</span>
+                            {% empty %}
+                                <div class="text-muted small">No options found.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="mb-2">year</h6>
+                            {% for item in years %}
+                                <span class="option-chip mono">{{ item }}</span>
+                            {% empty %}
+                                <div class="text-muted small">No options found.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="mb-2">paper_code / variant / answer</h6>
+                            <div class="mb-2">
+                                <div class="text-muted small mb-1">paper_code</div>
+                                {% for item in paper_codes %}
+                                    <span class="option-chip mono">{{ item }}</span>
+                                {% empty %}
+                                    <div class="text-muted small">No options found.</div>
+                                {% endfor %}
+                            </div>
+                            <div>
+                                <div class="text-muted small mb-1">variant</div>
+                                {% for item in variants %}
+                                    <span class="option-chip mono">{{ item }}</span>
+                                {% empty %}
+                                    <div class="text-muted small">No options found.</div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2">
+                                <div class="text-muted small mb-1">answer</div>
+                                {% for item in answers %}
+                                    <span class="option-chip mono">{{ item }}</span>
+                                {% empty %}
+                                    <div class="text-muted small">No options found.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <h5 class="mb-0">Subtopic options ({{ subtopic_count }})</h5>
+                        <div class="sticky-top-lite w-100 w-md-auto">
+                            <input id="subtopicSearch" class="form-control form-control-sm" placeholder="Search subtopics...">
+                        </div>
+                    </div>
+                    <div class="mb-2 text-muted small">
+                        `question_type` filter uses the same values as `subtopic`.
+                    </div>
+                    <div id="subtopicList">
+                        {% for item in subtopics %}
+                            <span class="option-chip subtopic-chip" data-subtopic="{{ item|lower }}">{{ item }}</span>
+                        {% empty %}
+                            <div class="text-muted small">No subtopics found.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="mb-2">order_by options</h6>
+                    {% for item in order_by_options %}
+                        <span class="option-chip mono">{{ item }}</span>
+                    {% empty %}
+                        <div class="text-muted small">No options found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const input = document.getElementById("subtopicSearch");
+            if (!input) return;
+            const chips = Array.from(document.querySelectorAll(".subtopic-chip"));
+            input.addEventListener("input", function () {
+                const q = (input.value || "").toLowerCase().trim();
+                chips.forEach((chip) => {
+                    const text = chip.dataset.subtopic || "";
+                    chip.style.display = !q || text.includes(q) ? "inline-flex" : "none";
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

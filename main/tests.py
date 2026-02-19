@@ -261,6 +261,13 @@ class APIKeyProtectionTests(SimpleTestCase):
         body = json.loads(response.content.decode("utf-8"))
         self.assertIn("API key required", body.get("error", ""))
 
+    def test_api_subtopics_requires_api_key(self):
+        request = self.factory.get("/api/subtopics/")
+        response = views.api_subtopics(request)
+        self.assertEqual(response.status_code, 401)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertIn("API key required", body.get("error", ""))
+
 
 class QuestionFilterSubjectTests(SimpleTestCase):
     def setUp(self):
@@ -286,3 +293,49 @@ class APIKeyExtractionTests(SimpleTestCase):
         request = self.factory.get("/api/questions/?api_key=r19_test_query")
         parsed = views._extract_api_key(request)
         self.assertEqual(parsed, "r19_test_query")
+
+
+class APISubtopicsEndpointTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch("main.views.query_all")
+    @patch("main.views._get_question_table_columns")
+    @patch("main.views._require_api_key")
+    def test_api_subtopics_returns_flat_and_grouped_payload(
+        self,
+        mock_require_api_key,
+        mock_get_columns,
+        mock_query_all,
+    ):
+        mock_require_api_key.return_value = None
+        mock_get_columns.return_value = {"session_code", "session", "subtopic"}
+        mock_query_all.return_value = [
+            {"session_code": "625", "subtopic": "Forces"},
+            {"session_code": "625", "subtopic": "Motion"},
+            {"session_code": "625", "subtopic": "Motion"},
+        ]
+
+        request = self.factory.get("/api/subtopics/?subject=Physics")
+        response = views.api_subtopics(request)
+        self.assertEqual(response.status_code, 200)
+        body = json.loads(response.content.decode("utf-8"))
+
+        self.assertEqual(body.get("count"), 2)
+        self.assertEqual(body.get("subtopics"), ["Forces", "Motion"])
+        grouped = body.get("by_session_code") or []
+        self.assertEqual(len(grouped), 1)
+        self.assertEqual(grouped[0].get("session_code"), "625")
+        self.assertEqual(grouped[0].get("subject"), "Physics")
+
+    @patch("main.views._get_question_table_columns")
+    @patch("main.views._require_api_key")
+    def test_api_subtopics_invalid_subject_returns_400(self, mock_require_api_key, mock_get_columns):
+        mock_require_api_key.return_value = None
+        mock_get_columns.return_value = {"session_code", "subtopic"}
+
+        request = self.factory.get("/api/subtopics/?subject=Astronomy")
+        response = views.api_subtopics(request)
+        self.assertEqual(response.status_code, 400)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertIn("Invalid subject", body.get("error", ""))

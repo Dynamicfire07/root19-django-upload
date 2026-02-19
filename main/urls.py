@@ -14,6 +14,7 @@ urlpatterns = [
     path('check-answer/', views.check_answer, name='check_answer'),
     path('update-activity/', views.update_activity, name='update_activity'),
     path('question-bank/', views.question_bank, name='question_bank'),
+    path('reference/api-options/', views.api_options_reference, name='api_options_reference'),
     path('login/', views.login_view, name='login'),
     path('register/', views.register, name='register'),
     path('logout/', views.logout_view, name='logout'),
@@ -46,6 +47,7 @@ urlpatterns = [
     path('api/duels/join/', views.api_join_duel, name='api_join_duel'),
     path('api/duels/<int:duel_id>/', views.api_duel_status, name='api_duel_status'),
     path('api/duels/<int:duel_id>/submit', views.api_duel_submit, name='api_duel_submit'),
+    path('api/subtopics/', views.api_subtopics, name='api_subtopics'),
     path('api/questions/', views.api_questions, name='api_questions'),
     path('api/questions/<str:question_id>/', views.api_question_detail, name='api_question_detail'),
 ]

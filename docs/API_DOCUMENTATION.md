@@ -105,6 +105,36 @@ curl -H "X-API-Key: r19_xxx" \
   "https://app.root19.com/api/questions/0/?include_image_base64=0"
 ```
 
+### 3) Import All Subtopics
+
+`GET /api/subtopics/`
+
+Returns all unique subtopics for import workflows.
+
+#### Query parameters
+
+- `subject` (`Biology`, `Chemistry`, `Physics`, or code like `625`)
+- `session_code`
+- `session`
+- `q` (subtopic text search)
+
+#### Example
+
+```text
+https://app.root19.com/api/subtopics/?api_key=r19_xxx
+```
+
+Filter example:
+
+```text
+https://app.root19.com/api/subtopics/?api_key=r19_xxx&subject=Physics&session=Oct/Nov
+```
+
+Response includes:
+
+- `subtopics` (flat unique list)
+- `by_session_code` (grouped list with subject/session_code metadata)
+
 ## Response shape (list)
 
 ```json
