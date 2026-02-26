@@ -12,7 +12,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
 
     {% include '_app_styles.html' %}
     {% include '_analytics_head.html' %}
@@ -23,7 +23,7 @@
 
     <main>
         <!-- Hero Section -->
-        <section class="hero-neo position-relative overflow-hidden">
+        <section class="hero-neo position-relative overflow-hidden" data-scroll-scene>
             <div class="hero-ambient hero-ambient-primary"></div>
             <div class="hero-ambient hero-ambient-accent"></div>
             <div class="hero-noise" aria-hidden="true"></div>
@@ -33,18 +33,18 @@
 
             <div class="container position-relative">
                 <div class="row align-items-center justify-content-between gy-5">
-                    <div class="col-lg-6">
-                        <div class="hero-copy-shell">
+                    <div class="col-lg-6 pe-xl-4">
+                        <div class="hero-copy-shell" data-hero-copy>
                             <div class="hero-pill text-uppercase fw-semibold">
                                 <span class="hero-pill-dot"></span>
-                                Root 19 / Exam Prep Platform
+                                Root 19 / Premium Exam Prep Workspace
                             </div>
                             <h1 class="display-4 fw-bold hero-title mt-3">
-                                <span class="hero-title-line">Built for serious exam prep,</span>
-                                <span class="hero-title-line hero-title-accent">from first practice to final revision.</span>
+                                <span class="hero-title-line">A premium workspace for</span>
+                                <span class="hero-title-line hero-title-accent">focused exam preparation.</span>
                             </h1>
                             <p class="hero-lede mt-3 mb-4">
-                                Run focused drills, track your readiness, compete in live duels, and keep your full progress synced in one professional workspace.
+                                Practice in timed sets, review with clarity, and track measurable progress in one clean workflow built for daily revision and final prep.
                             </p>
 
                             <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
@@ -52,22 +52,22 @@
                                 <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create your account</a>
                                 <div class="d-flex align-items-center gap-2 hero-meta">
                                     <span class="pulse-dot"></span>
-                                    <small class="text-white-50">Live updates every day</small>
+                                    <small class="text-white-50">Question bank updated regularly</small>
                                 </div>
                             </div>
 
-                            <div class="hero-quick-strip mt-4" aria-label="Hero highlights">
-                                <div class="hero-quick-item">
-                                    <span class="hero-quick-icon"></span>
-                                    Adaptive practice flow
+                            <div class="hero-proof-list mt-4" aria-label="Key platform strengths">
+                                <div class="hero-proof-item">
+                                    <span class="hero-proof-icon"></span>
+                                    Timed practice and review mode in one flow
                                 </div>
-                                <div class="hero-quick-item">
-                                    <span class="hero-quick-icon"></span>
-                                    Progress + streak insights
+                                <div class="hero-proof-item">
+                                    <span class="hero-proof-icon"></span>
+                                    Progress, streaks, and readiness in one dashboard
                                 </div>
-                                <div class="hero-quick-item">
-                                    <span class="hero-quick-icon"></span>
-                                    Duels and leaderboard
+                                <div class="hero-proof-item">
+                                    <span class="hero-proof-icon"></span>
+                                    Competitive duels and leaderboard when you want pace
                                 </div>
                             </div>
 
@@ -77,74 +77,32 @@
                                     <div class="hero-metric-value" id="question-count-tertiary">0</div>
                                 </div>
                                 <div class="hero-metric">
-                                    <div class="hero-metric-label">Modes</div>
-                                    <div class="hero-metric-value">4+</div>
+                                    <div class="hero-metric-label">Readiness view</div>
+                                    <div class="hero-metric-value">80%</div>
                                 </div>
                                 <div class="hero-metric">
-                                    <div class="hero-metric-label">Core tools</div>
-                                    <div class="hero-metric-value">8</div>
-                                </div>
-                            </div>
-
-                            <div class="hero-badges d-flex flex-wrap gap-3 mt-4">
-                                <div class="badge-ghost">Timed practice</div>
-                                <div class="badge-ghost">Detailed solutions</div>
-                                <div class="badge-ghost">Performance analytics</div>
-                                <div class="badge-ghost">Smart filters</div>
-                                <div class="badge-ghost">Duels + leaderboard</div>
-                            </div>
-
-                            <div class="hero-feature-stack mt-4">
-                                <div class="hero-feature">
-                                    <div class="feature-dot"></div>
-                                    <div>
-                                        <div class="feature-label">Stay in flow</div>
-                                        <div class="feature-desc">
-                                            Toggle between timed drills and walkthrough mode in one click.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="hero-feature">
-                                    <div class="feature-dot alt"></div>
-                                    <div>
-                                        <div class="feature-label">Never lose progress</div>
-                                        <div class="feature-desc">
-                                            Your streaks, accuracy, and attempts sync when you log in.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="hero-feature">
-                                    <div class="feature-dot"></div>
-                                    <div>
-                                        <div class="feature-label">Know what to fix</div>
-                                        <div class="feature-desc">
-                                            Surface weak topics instantly with heatmapped stats.
-                                        </div>
-                                    </div>
+                                    <div class="hero-metric-label">Study modes</div>
+                                    <div class="hero-metric-value">4+</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-lg-5">
-                        <div class="hero-visual-wrap">
+                    <div class="col-lg-6">
+                        <div class="hero-visual-wrap" data-hero-stage>
+                            <div class="hero-stage-label text-uppercase">Progress cockpit</div>
                             <div class="hero-panel-glow" aria-hidden="true"></div>
                             <div class="hero-float-card hero-float-card-top" data-parallax data-speed="0.22" aria-hidden="true">
-                                <span class="hero-float-label">Focus score</span>
-                                <span class="hero-float-value">+12%</span>
-                                <span class="hero-float-trend">this week</span>
-                            </div>
-                            <div class="hero-float-card hero-float-card-bottom" data-parallax data-speed="-0.16" aria-hidden="true">
-                                <span class="hero-float-label">Next drill</span>
-                                <span class="hero-float-value">Algebra</span>
-                                <span class="hero-float-trend">8 questions queued</span>
+                                <span class="hero-float-label">This week</span>
+                                <span class="hero-float-value">+12% focus score</span>
+                                <span class="hero-float-trend">consistency improving</span>
                             </div>
                             <div class="hero-orbit-badge" data-parallax data-speed="0.12" aria-hidden="true">
-                                <span class="hero-orbit-badge-value">7d</span>
-                                <span class="hero-orbit-badge-label">streak</span>
+                                <span class="hero-orbit-badge-value">82%</span>
+                                <span class="hero-orbit-badge-label">readiness</span>
                             </div>
 
-                            <div class="hero-panel shadow-lg" data-tilt>
+                            <div class="hero-panel shadow-lg" data-tilt data-hero-panel>
                             <div class="panel-header d-flex align-items-center justify-content-between">
                                 <div>
                                     <div class="text-white-50 small">Today</div>
@@ -154,6 +112,14 @@
                                     <span class="chip-dot"></span>
                                     Tracking
                                 </div>
+                            </div>
+
+                            <div class="panel-hero-band mt-3">
+                                <div class="panel-hero-band-copy">
+                                    <div class="panel-band-label">Readiness trend</div>
+                                    <div class="panel-band-value">Steady improvement this week</div>
+                                </div>
+                                <div class="mini-graph premium-graph" aria-hidden="true"></div>
                             </div>
 
                             <div class="panel-body">
@@ -538,9 +504,8 @@
         const revealSelectors = [
             '.hero-copy-shell',
             '.hero-visual-wrap',
+            '.hero-proof-item',
             '.hero-metric',
-            '.hero-badges .badge-ghost',
-            '.hero-feature',
             '.brand-strip',
             '.section-heading-wrap',
             '.stat-card',
@@ -597,34 +562,104 @@
             revealTargets.forEach((el) => revealObserver.observe(el));
         }
 
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
         const parallaxNodes = Array.from(document.querySelectorAll('[data-parallax]'));
-        const heroSection = document.querySelector('.hero-neo');
+        const heroSection = document.querySelector('[data-scroll-scene]');
+        const headingDepthTargets = Array.from(document.querySelectorAll('.section-heading-wrap'));
+        const depthTargets = Array.from(document.querySelectorAll([
+            '.brand-strip',
+            '.section-heading-wrap',
+            '.stat-card',
+            '.feature-card',
+            '.feature-spotlight',
+            '.journey-card',
+            '.module-card',
+            '.home-final-cta'
+        ].join(',')));
 
-        if (heroSection && parallaxNodes.length && !prefersReducedMotion) {
-            let parallaxRaf = 0;
+        headingDepthTargets.forEach((el) => el.classList.add('scroll-depth-fx'));
 
-            const updateParallax = () => {
-                parallaxRaf = 0;
+        if (!prefersReducedMotion && (heroSection || depthTargets.length || parallaxNodes.length)) {
+            let scrollSceneRaf = 0;
+
+            const setHeroScrollScene = () => {
+                if (!heroSection) return;
+
                 const rect = heroSection.getBoundingClientRect();
-                const viewport = window.innerHeight || 1;
-                const distanceFromCenter = (rect.top + rect.height / 2) - (viewport / 2);
-                const normalized = Math.max(-1, Math.min(1, distanceFromCenter / viewport));
+                const viewportH = window.innerHeight || 1;
+                const viewportW = window.innerWidth || 1;
+                const travel = Math.max(rect.height - viewportH * 0.18, viewportH * 0.72);
+                const rawProgress = clamp((-rect.top) / travel, 0, 1);
+                const progress = easeOutCubic(rawProgress);
+                const isMobile = viewportW < 768;
 
-                parallaxNodes.forEach((node) => {
-                    const speed = Number.parseFloat(node.dataset.speed || '0.14');
-                    node.style.setProperty('--hero-parallax-y', `${(normalized * speed * -56).toFixed(1)}px`);
-                });
-            };
+                heroSection.style.setProperty('--hero-progress', progress.toFixed(4));
+                heroSection.style.setProperty('--hero-copy-y', `${(progress * (isMobile ? 14 : 34)).toFixed(1)}px`);
+                heroSection.style.setProperty('--hero-copy-scale', `${(1 - progress * (isMobile ? 0.015 : 0.03)).toFixed(4)}`);
+                heroSection.style.setProperty('--hero-copy-opacity', `${(1 - progress * (isMobile ? 0.16 : 0.34)).toFixed(4)}`);
+                heroSection.style.setProperty('--hero-title-scale', `${(1 - progress * (isMobile ? 0.015 : 0.045)).toFixed(4)}`);
+                heroSection.style.setProperty('--hero-stage-y', `${(-progress * (isMobile ? 10 : 28)).toFixed(1)}px`);
+                heroSection.style.setProperty('--hero-stage-scale', `${(1 - progress * (isMobile ? 0.01 : 0.028)).toFixed(4)}`);
+                heroSection.style.setProperty('--hero-stage-rotate-x', `${(isMobile ? 0 : progress * 3.8).toFixed(2)}deg`);
+                heroSection.style.setProperty('--hero-stage-rotate-y', `${(isMobile ? 0 : -progress * 2.6).toFixed(2)}deg`);
+                heroSection.style.setProperty('--hero-cue-shift', `${(progress * 8).toFixed(1)}px`);
+                heroSection.style.setProperty('--hero-cue-opacity', `${clamp(1 - (progress * 1.25), 0, 1).toFixed(4)}`);
+                heroSection.style.setProperty('--hero-grid-fade', `${(1 - progress * 0.4).toFixed(4)}`);
 
-            const requestParallax = () => {
-                if (!parallaxRaf) {
-                    parallaxRaf = requestAnimationFrame(updateParallax);
+                if (parallaxNodes.length) {
+                    const distanceFromCenter = (rect.top + rect.height / 2) - (viewportH / 2);
+                    const normalized = clamp(distanceFromCenter / viewportH, -1, 1);
+                    parallaxNodes.forEach((node) => {
+                        const speed = Number.parseFloat(node.dataset.speed || '0.14');
+                        node.style.setProperty('--hero-parallax-y', `${(normalized * speed * -56).toFixed(1)}px`);
+                    });
                 }
             };
 
-            requestParallax();
-            window.addEventListener('scroll', requestParallax, { passive: true });
-            window.addEventListener('resize', requestParallax);
+            const setDepthMotion = () => {
+                if (!depthTargets.length) return;
+
+                const viewportH = window.innerHeight || 1;
+                depthTargets.forEach((el) => {
+                    const rect = el.getBoundingClientRect();
+                    const center = rect.top + rect.height / 2;
+                    const distance = (center - viewportH / 2) / viewportH;
+                    const clampedDistance = clamp(distance, -1.2, 1.2);
+                    const magnitude = Math.min(Math.abs(clampedDistance), 1);
+                    const baseStrength =
+                        el.classList.contains('home-final-cta') ? 18 :
+                        el.classList.contains('feature-spotlight') ? 14 :
+                        el.classList.contains('section-heading-wrap') ? 10 :
+                        el.classList.contains('brand-strip') ? 8 :
+                        12;
+
+                    const y = clampedDistance * baseStrength;
+                    const scale = 1 - (magnitude * 0.02);
+                    const rot = clampedDistance * -1.6;
+
+                    el.style.setProperty('--scroll-depth-y', `${y.toFixed(1)}px`);
+                    el.style.setProperty('--scroll-depth-scale', `${scale.toFixed(4)}`);
+                    el.style.setProperty('--scroll-depth-rot', `${rot.toFixed(2)}deg`);
+                });
+            };
+
+            const updateScrollSceneEffects = () => {
+                scrollSceneRaf = 0;
+                setHeroScrollScene();
+                setDepthMotion();
+            };
+
+            const requestScrollSceneEffects = () => {
+                if (!scrollSceneRaf) {
+                    scrollSceneRaf = requestAnimationFrame(updateScrollSceneEffects);
+                }
+            };
+
+            requestScrollSceneEffects();
+            window.addEventListener('scroll', requestScrollSceneEffects, { passive: true });
+            window.addEventListener('resize', requestScrollSceneEffects);
         }
     </script>
 
