@@ -59,7 +59,7 @@ from .question_images import (
     apply_question_image_src_to_rows,
 )
 from .streaks import compute_streak, invalidate_streak_cache
-from .models import BugReport, APIKey
+from .models import BugReport, APIKey, QuestionBankNotice
 
 CHAMPION_CACHE_KEY = "weekly_champion"
 CHAMPION_CACHE_TTL = 1800  # 30 minutes
@@ -727,7 +727,20 @@ def update_weekly_champion():
 def question_bank(request):
     """Render the initial page with session codes."""
     session_options = get_session_options()
-    return render(request, 'question_bank.html', {'session_options': session_options})
+    question_bank_notice = (
+        QuestionBankNotice.objects.filter(is_active=True)
+        .exclude(title="", message="")
+        .order_by("-updated_at", "-id")
+        .first()
+    )
+    return render(
+        request,
+        'question_bank.html',
+        {
+            'session_options': session_options,
+            'question_bank_notice': question_bank_notice,
+        },
+    )
 
 
 def api_options_reference(request):
@@ -2602,6 +2615,74 @@ def staff_api_keys(request):
             "api_keys": keys,
             "generated_key": generated_key,
             "access_modes": APIKey.ACCESS_MODE_CHOICES,
+        },
+    )
+
+
+@staff_member_required
+def staff_question_bank_notice(request):
+    """Manage a banner/notification shown on the question selection screen."""
+    levels = list(QuestionBankNotice.LEVEL_CHOICES)
+    valid_levels = {value for value, _label in levels}
+    notice = QuestionBankNotice.objects.order_by("-id").first()
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "save").strip().lower()
+
+        if action == "clear":
+            if notice:
+                notice.title = ""
+                notice.message = ""
+                notice.is_active = False
+                notice.level = QuestionBankNotice.LEVEL_INFO
+                notice.save(update_fields=["title", "message", "is_active", "level", "updated_at"])
+            messages.success(request, "Question selection notification cleared.")
+            return redirect("staff_question_bank_notice")
+
+        title = (request.POST.get("title") or "").strip()
+        message_text = (request.POST.get("message") or "").strip()
+        level = (request.POST.get("level") or QuestionBankNotice.LEVEL_INFO).strip().lower()
+        is_active = request.POST.get("is_active") == "on"
+
+        if level not in valid_levels:
+            level = QuestionBankNotice.LEVEL_INFO
+
+        if is_active and not (title or message_text):
+            messages.error(request, "Add a title or message before enabling the notification.")
+            return redirect("staff_question_bank_notice")
+
+        if not notice:
+            notice = QuestionBankNotice()
+
+        notice.title = title
+        notice.message = message_text
+        notice.level = level
+        notice.is_active = is_active
+        notice.save()
+        messages.success(
+            request,
+            "Question selection notification saved and "
+            + ("enabled." if is_active else "kept hidden."),
+        )
+        return redirect("staff_question_bank_notice")
+
+    if not notice:
+        notice = QuestionBankNotice(level=QuestionBankNotice.LEVEL_INFO, is_active=False)
+
+    active_notice = (
+        QuestionBankNotice.objects.filter(is_active=True)
+        .exclude(title="", message="")
+        .order_by("-updated_at", "-id")
+        .first()
+    )
+
+    return render(
+        request,
+        "staff_question_bank_notice.html",
+        {
+            "notice": notice,
+            "levels": levels,
+            "active_notice": active_notice,
         },
     )
 

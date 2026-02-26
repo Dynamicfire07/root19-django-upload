@@ -119,3 +119,33 @@ class APIKey(models.Model):
             raise ValueError("API key cannot be empty.")
         self.key_hash = self.hash_key(normalized)
         self.key_prefix = normalized[:16]
+
+
+class QuestionBankNotice(models.Model):
+    LEVEL_INFO = "info"
+    LEVEL_SUCCESS = "success"
+    LEVEL_WARNING = "warning"
+    LEVEL_DANGER = "danger"
+    LEVEL_CHOICES = [
+        (LEVEL_INFO, "Info"),
+        (LEVEL_SUCCESS, "Success"),
+        (LEVEL_WARNING, "Warning"),
+        (LEVEL_DANGER, "Danger"),
+    ]
+
+    title = models.CharField(max_length=120, blank=True)
+    message = models.CharField(max_length=280, blank=True)
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default=LEVEL_INFO)
+    is_active = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "question_bank_notices"
+        ordering = ("-updated_at", "-id")
+
+    def __str__(self):
+        title = (self.title or "").strip()
+        msg = (self.message or "").strip()
+        label = title or (msg[:40] + ("..." if len(msg) > 40 else "")) or "Question bank notice"
+        status = "active" if self.is_active else "inactive"
+        return f"{label} ({status})"

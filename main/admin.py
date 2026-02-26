@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import BugReport, APIKey
+from .models import BugReport, APIKey, QuestionBankNotice
 
 
 @admin.register(BugReport)
@@ -97,6 +97,15 @@ class APIKeyAdmin(admin.ModelAdmin):
                 f"API key generated for '{obj.name or obj.id}'. Copy now (shown once): {raw_key}",
                 level=messages.WARNING,
             )
+
+
+@admin.register(QuestionBankNotice)
+class QuestionBankNoticeAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "message", "level", "is_active", "updated_at")
+    list_filter = ("is_active", "level", "updated_at")
+    search_fields = ("title", "message")
+    readonly_fields = ("updated_at",)
+    ordering = ("-updated_at", "-id")
 
 # Simple customization of the default Django admin site
 admin.site.site_header = "Quiz Administration"

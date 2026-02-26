@@ -31,6 +31,7 @@ urlpatterns = [
     path('staff/password-requests/', views.staff_password_requests, name='staff_password_requests'),
     path('staff/theme-access/', views.staff_theme_access, name='staff_theme_access'),
     path('staff/api-keys/', views.staff_api_keys, name='staff_api_keys'),
+    path('staff/question-bank-notice/', views.staff_question_bank_notice, name='staff_question_bank_notice'),
     path('report-bug/', views.report_bug, name='report_bug'),
     path('report-bug/thanks/', views.report_bug_thanks, name='report_bug_thanks'),
     path('staff/bugs/', views.staff_bug_list, name='staff_bug_list'),

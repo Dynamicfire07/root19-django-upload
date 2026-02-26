@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Question Notice</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  {% include '_app_styles.html' %}
+  {% include '_analytics_head.html' %}
+  {% include '_favicon.html' %}
+</head>
+<body class="bg-light">
+  {% include 'navbar.html' %}
+  <main class="py-4 py-md-5">
+    <div class="container">
+      <div class="bug-hero mb-3">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <div class="pill">Question bank</div>
+            <h1 class="mt-2 mb-1 fw-bold">Question selection notification</h1>
+            <p class="mb-0 text-white-75">Show a short notice on the question selection screen (`/question-bank/`).</p>
+          </div>
+        </div>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% if active_notice %}
+      {% if active_notice.title or active_notice.message %}
+        <div class="alert alert-{{ active_notice.level }} shadow-sm mb-4">
+          <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-megaphone-fill mt-1"></i>
+            <div>
+              <div class="small text-muted mb-1">Currently visible on question selection page</div>
+              {% if active_notice.title %}<div class="fw-bold">{{ active_notice.title }}</div>{% endif %}
+              {% if active_notice.message %}<div>{{ active_notice.message }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      {% endif %}
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" for="noticeTitle">Title (optional)</label>
+              <input
+                type="text"
+                id="noticeTitle"
+                name="title"
+                class="form-control"
+                maxlength="120"
+                value="{{ notice.title|default:'' }}"
+                placeholder="Service notice"
+              >
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="noticeLevel">Style</label>
+              <select id="noticeLevel" name="level" class="form-select">
+                {% for value, label in levels %}
+                  <option value="{{ value }}" {% if notice.level == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="noticeMessage">Message</label>
+              <textarea
+                id="noticeMessage"
+                name="message"
+                class="form-control"
+                rows="3"
+                maxlength="280"
+                placeholder="Example: Jio users may experience slow image loading today. Switch to Wi-Fi or try again later."
+              >{{ notice.message|default:'' }}</textarea>
+              <div class="form-text">Short banner text shown above the question filters.</div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="noticeActive" name="is_active" {% if notice.is_active %}checked{% endif %}>
+                <label class="form-check-label" for="noticeActive">Show this notification on `/question-bank/`</label>
+              </div>
+            </div>
+
+            <div class="col-12 d-flex gap-2 flex-wrap">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i> Save Notice
+              </button>
+              <button type="submit" name="action" value="clear" class="btn btn-outline-danger">
+                <i class="bi bi-x-circle me-1"></i> Clear & Hide
+              </button>
+              <a href="/question-bank/" class="btn btn-outline-secondary">Open Question Selection</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+  {% include 'footer.html' %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
