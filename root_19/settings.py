@@ -11,6 +11,10 @@ except ImportError:
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+ACTION_LOG_FILE = LOG_DIR / "actions.log"
+ACTION_LOG_FILE.touch(exist_ok=True)
 
 # Security / environment toggles
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-to-a-unique-key")
@@ -53,6 +57,7 @@ MIDDLEWARE += [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'main.middleware.RequestActionLoggingMiddleware',
     'main.middleware.StaticMediaCacheMiddleware',
 ]
 
@@ -186,4 +191,35 @@ if WHITENOISE_AVAILABLE:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 else:
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-    
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "actions_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(ACTION_LOG_FILE),
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "standard",
+            "encoding": "utf-8",
+        },
+    },
+    "loggers": {
+        "main.request_actions": {
+            "handlers": ["actions_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["actions_file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}

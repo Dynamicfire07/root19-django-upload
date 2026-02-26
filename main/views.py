@@ -2000,6 +2000,11 @@ def update_activity(request):
 # ADMIN VIEWS
 # -------------------------
 
+def _normalize_answer(value: _t.Any) -> str:
+    """Normalize answer text for resilient equality checks."""
+    return " ".join(str(value or "").strip().lower().split())
+
+
 @staff_member_required
 def user_activity_admin(request):
     """Display user activity records with summary statistics for admins."""
@@ -2207,6 +2212,108 @@ def user_activity_admin(request):
     }
 
     return render(request, "user_activity_admin.html", context)
+
+
+@staff_member_required
+def staff_question_tester(request):
+    """Admin tool to find questions quickly and verify answer correctness."""
+    ensure_question_image_columns()
+
+    question_id = (request.GET.get("question_id") or request.POST.get("question_id") or "").strip()
+    query_text = (request.GET.get("q") or "").strip()
+
+    selected = None
+    search_results = []
+    evaluation = None
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip().lower()
+        if action == "check_answer":
+            submitted_answer = (request.POST.get("submitted_answer") or "").strip()
+            if not question_id:
+                messages.error(request, "Question ID is required to check an answer.")
+            else:
+                selected = query_one(
+                    """
+                    SELECT question_id, session_code, session, year, paper_code, variant,
+                           file_question, subtopic, extracted_text, image_base64, image_url, answer
+                    FROM questions
+                    WHERE question_id = %s
+                    """,
+                    (question_id,),
+                )
+                if not selected:
+                    messages.error(request, "Question not found.")
+                else:
+                    selected["image_src"] = build_question_image_src(
+                        selected.get("image_url"),
+                        selected.get("image_base64"),
+                    )
+                    expected_answer = (selected.get("answer") or "").strip()
+                    is_correct = _normalize_answer(submitted_answer) == _normalize_answer(expected_answer)
+                    evaluation = {
+                        "submitted_answer": submitted_answer,
+                        "expected_answer": expected_answer,
+                        "is_correct": is_correct,
+                    }
+                    if not submitted_answer:
+                        messages.error(request, "Enter an answer first.")
+                    elif is_correct:
+                        messages.success(request, "Answer is correct.")
+                    else:
+                        messages.error(request, "Answer is incorrect.")
+
+    if question_id and not selected:
+        selected = query_one(
+            """
+            SELECT question_id, session_code, session, year, paper_code, variant,
+                   file_question, subtopic, extracted_text, image_base64, image_url, answer
+            FROM questions
+            WHERE question_id = %s
+            """,
+            (question_id,),
+        )
+        if selected:
+            selected["image_src"] = build_question_image_src(
+                selected.get("image_url"),
+                selected.get("image_base64"),
+            )
+            search_results = [selected]
+        else:
+            messages.warning(request, f"No question found for ID '{question_id}'.")
+    elif query_text:
+        term = f"%{query_text}%"
+        search_results = query_all(
+            """
+            SELECT question_id, session_code, session, year, paper_code, variant, subtopic,
+                   LEFT(extracted_text, 220) AS extracted_preview
+            FROM questions
+            WHERE extracted_text ILIKE %s
+               OR file_question ILIKE %s
+               OR question_id ILIKE %s
+            ORDER BY year DESC, question_id
+            LIMIT 120
+            """,
+            (term, term, term),
+        )
+
+    # Add display helpers.
+    for row in search_results:
+        row["subject_label"] = label_session(str(row.get("session_code") or ""))
+
+    if selected:
+        selected["subject_label"] = label_session(str(selected.get("session_code") or ""))
+
+    context = {
+        "filters": {
+            "question_id": question_id,
+            "q": query_text,
+        },
+        "search_results": search_results,
+        "selected_question": selected,
+        "evaluation": evaluation,
+    }
+    return render(request, "staff_question_tester.html", context)
 
 
 @staff_member_required

@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Tester</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include '_app_styles.html' %}
+    {% include '_analytics_head.html' %}
+    {% include '_favicon.html' %}
+    <style>
+        .qt-hero { background: linear-gradient(135deg,#0f172a,#1d4ed8); color:#fff; border-radius:16px; padding:1.35rem; box-shadow:0 1rem 2rem rgba(0,0,0,.14); }
+        .qt-label { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; }
+        .qt-value { font-weight:700; color:#0f172a; }
+        .question-text { white-space: pre-wrap; line-height: 1.55; }
+        .preview-text { font-size:.92rem; color:#4b5563; }
+    </style>
+</head>
+<body class="stats-page">
+    {% include 'navbar.html' %}
+
+    <main class="py-4 py-md-5">
+        <div class="container">
+            <div class="qt-hero mb-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <div class="pill">Admin tools</div>
+                        <h1 class="mt-2 mb-1 fw-bold">Question tester</h1>
+                        <p class="mb-0 text-white-75">Find any question by ID or extracted text, then validate answers directly.</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-lg-4">
+                            <label class="form-label">Question ID</label>
+                            <input type="text" name="question_id" value="{{ filters.question_id }}" class="form-control" placeholder="e.g. 0 or Q123">
+                            <div class="form-text">If provided, this exact ID lookup is used.</div>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Search extracted text</label>
+                            <input type="text" name="q" value="{{ filters.q }}" class="form-control" placeholder="Search by extracted text, file name, or question ID">
+                        </div>
+                        <div class="col-lg-2 d-grid">
+                            <button type="submit" class="btn btn-primary">Find questions</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if search_results %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">Matches ({{ search_results|length }})</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Question ID</th>
+                                        <th>Subject</th>
+                                        <th>Session</th>
+                                        <th>Year</th>
+                                        <th>Subtopic</th>
+                                        <th>Preview</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in search_results %}
+                                        <tr>
+                                            <td><code>{{ row.question_id }}</code></td>
+                                            <td>{{ row.subject_label }}</td>
+                                            <td>{{ row.session|default:"—" }}</td>
+                                            <td>{{ row.year }}</td>
+                                            <td>{{ row.subtopic|default:"—" }}</td>
+                                            <td class="preview-text">{{ row.extracted_preview|default:row.extracted_text|truncatechars:180 }}</td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-primary" href="/staff/question-tester/?question_id={{ row.question_id|urlencode }}">Open</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if selected_question %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                            <div>
+                                <h5 class="mb-1">Question {{ selected_question.question_id }}</h5>
+                                <div class="text-muted small">{{ selected_question.subject_label }} • {{ selected_question.session }} • {{ selected_question.year }} • Paper {{ selected_question.paper_code }} Variant {{ selected_question.variant }}</div>
+                            </div>
+                            <span class="badge bg-light text-dark">{{ selected_question.subtopic|default:"No subtopic" }}</span>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div class="qt-label">Expected answer</div>
+                                <div class="qt-value">{{ selected_question.answer|default:"—" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="qt-label">Session code</div>
+                                <div class="qt-value"><code>{{ selected_question.session_code }}</code></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="qt-label">File question</div>
+                                <div class="qt-value">{{ selected_question.file_question|default:"—" }}</div>
+                            </div>
+                        </div>
+
+                        {% if selected_question.image_src %}
+                            <div class="mb-3">
+                                <div class="qt-label mb-1">Question image</div>
+                                <img src="{{ selected_question.image_src }}" alt="Question image" class="img-fluid rounded border">
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <div class="qt-label mb-1">Extracted text</div>
+                            <div class="question-text border rounded p-3 bg-light">{{ selected_question.extracted_text }}</div>
+                        </div>
+
+                        <form method="post" class="row g-3 align-items-end">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="check_answer">
+                            <input type="hidden" name="question_id" value="{{ selected_question.question_id }}">
+                            <div class="col-md-8">
+                                <label class="form-label">Test answer</label>
+                                <input type="text" name="submitted_answer" class="form-control" placeholder="Type answer to validate">
+                            </div>
+                            <div class="col-md-4 d-grid">
+                                <button type="submit" class="btn btn-success">Check answer</button>
+                            </div>
+                        </form>
+
+                        {% if evaluation %}
+                            <div class="alert {% if evaluation.is_correct %}alert-success{% else %}alert-danger{% endif %} mt-3 mb-0">
+                                <strong>{% if evaluation.is_correct %}Correct{% else %}Incorrect{% endif %}</strong>
+                                <div class="small mt-1">Submitted: <code>{{ evaluation.submitted_answer|default:"(empty)" }}</code></div>
+                                <div class="small">Expected: <code>{{ evaluation.expected_answer|default:"(empty)" }}</code></div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
