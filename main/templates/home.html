@@ -12,7 +12,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     {% include '_app_styles.html' %}
     {% include '_analytics_head.html' %}
@@ -26,76 +26,100 @@
         <section class="hero-neo position-relative overflow-hidden">
             <div class="hero-ambient hero-ambient-primary"></div>
             <div class="hero-ambient hero-ambient-accent"></div>
+            <div class="hero-noise" aria-hidden="true"></div>
             <div class="hero-grid"></div>
+            <div class="hero-orbit hero-orbit-one" aria-hidden="true"></div>
+            <div class="hero-orbit hero-orbit-two" aria-hidden="true"></div>
 
             <div class="container position-relative">
                 <div class="row align-items-center justify-content-between gy-5">
                     <div class="col-lg-6">
-                        <div class="hero-pill text-uppercase fw-semibold">Root 19 / Exam Prep Platform</div>
-                        <h1 class="display-4 fw-bold hero-title mt-3">
-                            Built for serious exam prep, from first practice to final revision.
-                        </h1>
-                        <p class="hero-lede mt-3 mb-4">
-                            Run focused drills, track your readiness, compete in live duels, and keep your full progress synced in one professional workspace.
-                        </p>
-
-                        <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
-                            <a class="btn btn-light btn-lg shadow-sm" href="{% url 'question_bank' %}">Explore question bank</a>
-                            <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create your account</a>
-                            <div class="d-flex align-items-center gap-2 hero-meta">
-                                <span class="pulse-dot"></span>
-                                <small class="text-white-50">Live updates every day</small>
+                        <div class="hero-copy-shell">
+                            <div class="hero-pill text-uppercase fw-semibold">
+                                <span class="hero-pill-dot"></span>
+                                Root 19 / Exam Prep Platform
                             </div>
-                        </div>
+                            <h1 class="display-4 fw-bold hero-title mt-3">
+                                <span class="hero-title-line">Built for serious exam prep,</span>
+                                <span class="hero-title-line hero-title-accent">from first practice to final revision.</span>
+                            </h1>
+                            <p class="hero-lede mt-3 mb-4">
+                                Run focused drills, track your readiness, compete in live duels, and keep your full progress synced in one professional workspace.
+                            </p>
 
-                        <div class="hero-metric-row mt-4">
-                            <div class="hero-metric">
-                                <div class="hero-metric-label">Question bank</div>
-                                <div class="hero-metric-value" id="question-count-tertiary">0</div>
-                            </div>
-                            <div class="hero-metric">
-                                <div class="hero-metric-label">Modes</div>
-                                <div class="hero-metric-value">4+</div>
-                            </div>
-                            <div class="hero-metric">
-                                <div class="hero-metric-label">Core tools</div>
-                                <div class="hero-metric-value">8</div>
-                            </div>
-                        </div>
-
-                        <div class="hero-badges d-flex flex-wrap gap-3 mt-4">
-                            <div class="badge-ghost">Timed practice</div>
-                            <div class="badge-ghost">Detailed solutions</div>
-                            <div class="badge-ghost">Performance analytics</div>
-                            <div class="badge-ghost">Smart filters</div>
-                            <div class="badge-ghost">Duels + leaderboard</div>
-                        </div>
-
-                        <div class="hero-feature-stack mt-4">
-                            <div class="hero-feature">
-                                <div class="feature-dot"></div>
-                                <div>
-                                    <div class="feature-label">Stay in flow</div>
-                                    <div class="feature-desc">
-                                        Toggle between timed drills and walkthrough mode in one click.
-                                    </div>
+                            <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
+                                <a class="btn btn-light btn-lg shadow-sm" href="{% url 'question_bank' %}">Explore question bank</a>
+                                <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create your account</a>
+                                <div class="d-flex align-items-center gap-2 hero-meta">
+                                    <span class="pulse-dot"></span>
+                                    <small class="text-white-50">Live updates every day</small>
                                 </div>
                             </div>
-                            <div class="hero-feature">
-                                <div class="feature-dot alt"></div>
-                                <div>
-                                    <div class="feature-label">Never lose progress</div>
-                                    <div class="feature-desc">
-                                        Your streaks, accuracy, and attempts sync when you log in.
-                                    </div>
+
+                            <div class="hero-quick-strip mt-4" aria-label="Hero highlights">
+                                <div class="hero-quick-item">
+                                    <span class="hero-quick-icon"></span>
+                                    Adaptive practice flow
+                                </div>
+                                <div class="hero-quick-item">
+                                    <span class="hero-quick-icon"></span>
+                                    Progress + streak insights
+                                </div>
+                                <div class="hero-quick-item">
+                                    <span class="hero-quick-icon"></span>
+                                    Duels and leaderboard
                                 </div>
                             </div>
-                            <div class="hero-feature">
-                                <div class="feature-dot"></div>
-                                <div>
-                                    <div class="feature-label">Know what to fix</div>
-                                    <div class="feature-desc">
-                                        Surface weak topics instantly with heatmapped stats.
+
+                            <div class="hero-metric-row mt-4">
+                                <div class="hero-metric">
+                                    <div class="hero-metric-label">Question bank</div>
+                                    <div class="hero-metric-value" id="question-count-tertiary">0</div>
+                                </div>
+                                <div class="hero-metric">
+                                    <div class="hero-metric-label">Modes</div>
+                                    <div class="hero-metric-value">4+</div>
+                                </div>
+                                <div class="hero-metric">
+                                    <div class="hero-metric-label">Core tools</div>
+                                    <div class="hero-metric-value">8</div>
+                                </div>
+                            </div>
+
+                            <div class="hero-badges d-flex flex-wrap gap-3 mt-4">
+                                <div class="badge-ghost">Timed practice</div>
+                                <div class="badge-ghost">Detailed solutions</div>
+                                <div class="badge-ghost">Performance analytics</div>
+                                <div class="badge-ghost">Smart filters</div>
+                                <div class="badge-ghost">Duels + leaderboard</div>
+                            </div>
+
+                            <div class="hero-feature-stack mt-4">
+                                <div class="hero-feature">
+                                    <div class="feature-dot"></div>
+                                    <div>
+                                        <div class="feature-label">Stay in flow</div>
+                                        <div class="feature-desc">
+                                            Toggle between timed drills and walkthrough mode in one click.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-feature">
+                                    <div class="feature-dot alt"></div>
+                                    <div>
+                                        <div class="feature-label">Never lose progress</div>
+                                        <div class="feature-desc">
+                                            Your streaks, accuracy, and attempts sync when you log in.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-feature">
+                                    <div class="feature-dot"></div>
+                                    <div>
+                                        <div class="feature-label">Know what to fix</div>
+                                        <div class="feature-desc">
+                                            Surface weak topics instantly with heatmapped stats.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -103,7 +127,24 @@
                     </div>
 
                     <div class="col-lg-5">
-                        <div class="hero-panel shadow-lg" data-tilt>
+                        <div class="hero-visual-wrap">
+                            <div class="hero-panel-glow" aria-hidden="true"></div>
+                            <div class="hero-float-card hero-float-card-top" data-parallax data-speed="0.22" aria-hidden="true">
+                                <span class="hero-float-label">Focus score</span>
+                                <span class="hero-float-value">+12%</span>
+                                <span class="hero-float-trend">this week</span>
+                            </div>
+                            <div class="hero-float-card hero-float-card-bottom" data-parallax data-speed="-0.16" aria-hidden="true">
+                                <span class="hero-float-label">Next drill</span>
+                                <span class="hero-float-value">Algebra</span>
+                                <span class="hero-float-trend">8 questions queued</span>
+                            </div>
+                            <div class="hero-orbit-badge" data-parallax data-speed="0.12" aria-hidden="true">
+                                <span class="hero-orbit-badge-value">7d</span>
+                                <span class="hero-orbit-badge-label">streak</span>
+                            </div>
+
+                            <div class="hero-panel shadow-lg" data-tilt>
                             <div class="panel-header d-flex align-items-center justify-content-between">
                                 <div>
                                     <div class="text-white-50 small">Today</div>
@@ -181,12 +222,18 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
+
+                <a href="#home-overview" class="hero-scroll-cue text-decoration-none" aria-label="Scroll to explore features">
+                    <span class="hero-scroll-cue-label">Scroll to explore</span>
+                    <span class="hero-scroll-cue-track"><span class="hero-scroll-cue-dot"></span></span>
+                </a>
             </div>
         </section>
 
-        <section class="surface-section pt-4">
+        <section class="surface-section pt-4" id="home-overview">
             <div class="container">
                 <div class="brand-strip">
                     <div class="brand-strip-title">Designed for focused students and fast revision cycles</div>
@@ -425,8 +472,17 @@
 
     <script>
         const questionCount = {{ total_questions|default:0 }};
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (document.body) {
+            document.body.dataset.reducedMotion = prefersReducedMotion ? 'true' : 'false';
+        }
 
         const animateCount = (el, target) => {
+            if (prefersReducedMotion) {
+                el.textContent = Number(target || 0).toLocaleString();
+                return;
+            }
             const duration = 900;
             const start = performance.now();
 
@@ -449,7 +505,8 @@
         countTargets.forEach((el) => animateCount(el, questionCount));
 
         const tiltCard = document.querySelector('[data-tilt]');
-        if (tiltCard) {
+        const canTilt = !prefersReducedMotion && window.matchMedia('(pointer: fine)').matches;
+        if (tiltCard && canTilt) {
             tiltCard.addEventListener('pointermove', (event) => {
                 const rect = tiltCard.getBoundingClientRect();
                 const x = event.clientX - rect.left - rect.width / 2;
@@ -476,6 +533,99 @@
                 );
             });
         });
+
+        const revealTargets = new Set();
+        const revealSelectors = [
+            '.hero-copy-shell',
+            '.hero-visual-wrap',
+            '.hero-metric',
+            '.hero-badges .badge-ghost',
+            '.hero-feature',
+            '.brand-strip',
+            '.section-heading-wrap',
+            '.stat-card',
+            '.feature-card',
+            '.feature-spotlight',
+            '.journey-card',
+            '.module-card',
+            '.home-final-cta'
+        ];
+
+        revealSelectors.forEach((selector) => {
+            document.querySelectorAll(selector).forEach((el) => revealTargets.add(el));
+        });
+
+        let staggerIndex = 0;
+        revealTargets.forEach((el) => {
+            el.classList.add('reveal-fx');
+            if (!el.dataset.reveal) {
+                if (el.classList.contains('hero-copy-shell')) {
+                    el.dataset.reveal = 'left';
+                } else if (el.classList.contains('hero-visual-wrap')) {
+                    el.dataset.reveal = 'right';
+                } else {
+                    el.dataset.reveal = 'up';
+                }
+            }
+
+            if (
+                el.matches('.hero-metric, .badge-ghost, .hero-feature, .feature-card, .journey-card, .module-card')
+            ) {
+                el.style.setProperty('--reveal-delay', `${(staggerIndex % 7) * 55}ms`);
+                staggerIndex += 1;
+            }
+        });
+
+        const revealAll = () => {
+            revealTargets.forEach((el) => el.classList.add('is-visible'));
+        };
+
+        if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+            revealAll();
+        } else {
+            const revealObserver = new IntersectionObserver(
+                (entries, observer) => {
+                    entries.forEach((entry) => {
+                        if (!entry.isIntersecting) return;
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    });
+                },
+                { threshold: 0.14, rootMargin: '0px 0px -8% 0px' }
+            );
+
+            revealTargets.forEach((el) => revealObserver.observe(el));
+        }
+
+        const parallaxNodes = Array.from(document.querySelectorAll('[data-parallax]'));
+        const heroSection = document.querySelector('.hero-neo');
+
+        if (heroSection && parallaxNodes.length && !prefersReducedMotion) {
+            let parallaxRaf = 0;
+
+            const updateParallax = () => {
+                parallaxRaf = 0;
+                const rect = heroSection.getBoundingClientRect();
+                const viewport = window.innerHeight || 1;
+                const distanceFromCenter = (rect.top + rect.height / 2) - (viewport / 2);
+                const normalized = Math.max(-1, Math.min(1, distanceFromCenter / viewport));
+
+                parallaxNodes.forEach((node) => {
+                    const speed = Number.parseFloat(node.dataset.speed || '0.14');
+                    node.style.setProperty('--hero-parallax-y', `${(normalized * speed * -56).toFixed(1)}px`);
+                });
+            };
+
+            const requestParallax = () => {
+                if (!parallaxRaf) {
+                    parallaxRaf = requestAnimationFrame(updateParallax);
+                }
+            };
+
+            requestParallax();
+            window.addEventListener('scroll', requestParallax, { passive: true });
+            window.addEventListener('resize', requestParallax);
+        }
     </script>
 
     {% include 'footer.html' %}
