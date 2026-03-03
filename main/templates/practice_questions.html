@@ -293,6 +293,12 @@
                 feedback.textContent = isCorrect ? 'Correct!' : `Wrong! Correct answer: ${correctAnswer}`;
                 feedback.className = `feedback mt-3 ${isCorrect ? 'correct' : 'wrong'}`;
                 feedback.style.display = "block";
+
+                // MCQ-specific semantic feedback on top of tap feedback.
+                if (window.R19Haptics && typeof window.R19Haptics.trigger === 'function') {
+                    window.R19Haptics.trigger(isCorrect ? 'success' : 'error');
+                }
+
                 setTimeout(() => feedback.style.display = "none", 2000);
             });
         });
