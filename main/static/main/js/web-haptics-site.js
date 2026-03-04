@@ -3,8 +3,27 @@
   if (window.__R19_HAPTICS_BOOTSTRAPPED__) return;
   window.__R19_HAPTICS_BOOTSTRAPPED__ = true;
 
-  const LIB_URL = "https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/dist/index.mjs";
+  const LOCAL_LIB_URL =
+    typeof window !== "undefined" && window.R19_HAPTICS_LIB_URL
+      ? String(window.R19_HAPTICS_LIB_URL)
+      : null;
+  const CDN_LIB_URL = "https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/dist/index.mjs";
+  const LIB_URLS = [LOCAL_LIB_URL, CDN_LIB_URL].filter(Boolean);
   const STORAGE_KEY = "r19_haptics_enabled";
+  const DEBUG_KEY = "r19_haptics_debug";
+  const DEFAULT_PATTERNS = {
+    success: [{ duration: 30 }, { delay: 60, duration: 40 }],
+    warning: [{ duration: 40 }, { delay: 100, duration: 40 }],
+    error: [{ duration: 40 }, { delay: 40, duration: 40 }, { delay: 40, duration: 40 }],
+    light: [{ duration: 15 }],
+    medium: [{ duration: 25 }],
+    heavy: [{ duration: 35 }],
+    soft: [{ duration: 40 }],
+    rigid: [{ duration: 10 }],
+    selection: [{ duration: 8 }],
+    nudge: [{ duration: 80 }, { delay: 80, duration: 50 }],
+    buzz: [{ duration: 1000 }]
+  };
   const INTERACTIVE_SELECTOR = [
     "a[href]",
     "button",
@@ -34,6 +53,8 @@
   let defaultPatterns = {};
   let enabled = true;
   let lastTriggerAt = 0;
+  let handlersBound = false;
+  let hapticsSource = "none";
 
   const readEnabledState = () => {
     try {
@@ -48,6 +69,16 @@
       localStorage.setItem(STORAGE_KEY, value ? "on" : "off");
     } catch (error) {
       // Ignore storage failures (private mode/blocked storage).
+    }
+  };
+
+  const readDebugState = () => {
+    const search = String(window.location && window.location.search || "");
+    if (search.includes("hapticsDebug=1")) return true;
+    try {
+      return localStorage.getItem(DEBUG_KEY) === "on";
+    } catch (error) {
+      return false;
     }
   };
 
@@ -69,6 +100,63 @@
     if (!name) return "selection";
     if (defaultPatterns[name]) return defaultPatterns[name];
     return name;
+  };
+
+  const convertPatternToVibrateArray = (pattern) => {
+    if (typeof pattern === "number") {
+      return [Math.max(1, Math.floor(pattern))];
+    }
+
+    if (Array.isArray(pattern)) {
+      if (!pattern.length) return [];
+      if (typeof pattern[0] === "number") {
+        return pattern.map((n) => Math.max(0, Math.floor(Number(n) || 0)));
+      }
+
+      const seq = [];
+      pattern.forEach((step, index) => {
+        if (!step) return;
+        const delay = Math.max(0, Math.floor(Number(step.delay || 0)));
+        const duration = Math.max(1, Math.floor(Number(step.duration || 0)));
+        if (delay > 0) {
+          if (seq.length && index > 0) {
+            seq.push(delay);
+          } else {
+            seq.push(0, delay);
+          }
+        }
+        seq.push(duration);
+      });
+      return seq;
+    }
+
+    if (pattern && typeof pattern === "object" && Array.isArray(pattern.pattern)) {
+      return convertPatternToVibrateArray(pattern.pattern);
+    }
+
+    if (typeof pattern === "string") {
+      const preset = DEFAULT_PATTERNS[pattern.toLowerCase()];
+      if (preset) return convertPatternToVibrateArray(preset);
+    }
+
+    return convertPatternToVibrateArray("selection");
+  };
+
+  const createFallbackHaptics = () => {
+    const supportsVibrate = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+    return {
+      trigger(pattern) {
+        if (!supportsVibrate) return Promise.resolve();
+        const sequence = convertPatternToVibrateArray(pattern);
+        if (!sequence.length) return Promise.resolve();
+        navigator.vibrate(sequence);
+        return Promise.resolve();
+      },
+      cancel() {
+        if (supportsVibrate) navigator.vibrate(0);
+      },
+      destroy() {}
+    };
   };
 
   const trigger = (pattern, minGapMs = 50, options) => {
@@ -96,6 +184,9 @@
   };
 
   const bindGlobalHandlers = () => {
+    if (handlersBound) return;
+    handlersBound = true;
+
     document.addEventListener(
       "click",
       (event) => {
@@ -174,28 +265,43 @@
       },
       isSupported() {
         return Boolean(WebHapticsClass && WebHapticsClass.isSupported);
+      },
+      source() {
+        return hapticsSource;
       }
     };
   };
 
   const boot = async () => {
     enabled = readEnabledState();
+    const debugMode = readDebugState();
 
-    try {
-      const importer = new Function("url", "return import(url);");
-      const module = await importer(LIB_URL);
-      const WebHaptics = module && module.WebHaptics;
-      if (!WebHaptics) return;
+    for (const libUrl of LIB_URLS) {
+      try {
+        const module = await import(libUrl);
+        const WebHaptics = module && module.WebHaptics;
+        if (!WebHaptics) throw new Error("web-haptics module missing WebHaptics export");
 
-      defaultPatterns = module.defaultPatterns || {};
-      haptics = new WebHaptics({ showSwitch: false });
-      exposeControls(WebHaptics);
-
-      if (!WebHaptics.isSupported) return;
-      bindGlobalHandlers();
-    } catch (error) {
-      // Fail quietly on unsupported browsers or blocked CDN requests.
+        defaultPatterns = module.defaultPatterns || DEFAULT_PATTERNS;
+        haptics = new WebHaptics({ showSwitch: false, debug: debugMode });
+        hapticsSource = libUrl === LOCAL_LIB_URL ? "web-haptics-local" : "web-haptics-cdn";
+        exposeControls(WebHaptics);
+        bindGlobalHandlers();
+        if (!WebHaptics.isSupported && !debugMode) {
+          console.info("[R19Haptics] Device/browser vibration API unsupported. Enable debug mode with ?hapticsDebug=1 for desktop audio simulation.");
+        }
+        return;
+      } catch (error) {
+        // Try next candidate URL, then fallback.
+      }
     }
+
+    const FallbackHapticsClass = { isSupported: typeof navigator !== "undefined" && typeof navigator.vibrate === "function" };
+    defaultPatterns = DEFAULT_PATTERNS;
+    haptics = createFallbackHaptics();
+    hapticsSource = "fallback-vibrate";
+    exposeControls(FallbackHapticsClass);
+    bindGlobalHandlers();
   };
 
   if (document.readyState === "loading") {

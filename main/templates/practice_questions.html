@@ -242,6 +242,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const USER_ID = "{{ user_id|default:'' }}"; // Passed from Django view
+        let mcqWebHaptics = null;
+        let mcqHapticsReady = Promise.resolve();
         const shareModalEl = document.getElementById('shareChatModal');
         const shareModal = shareModalEl ? new bootstrap.Modal(shareModalEl) : null;
         const shareForm = document.getElementById('shareChatForm');
@@ -260,6 +262,27 @@
             recordStart(questions[currentIndex].dataset.questionId);
         }
 
+        // Direct MCQ integration with official WebHaptics API for this page.
+        async function initMcqWebHaptics() {
+            const libUrl = (window.R19_HAPTICS_LIB_URL || '').trim();
+            const urls = [];
+            if (libUrl) urls.push(libUrl);
+            urls.push('https://cdn.jsdelivr.net/npm/web-haptics@0.0.6/dist/index.mjs');
+
+            for (const url of urls) {
+                try {
+                    const mod = await import(url);
+                    if (mod && mod.WebHaptics) {
+                        mcqWebHaptics = new mod.WebHaptics({ showSwitch: false });
+                        return;
+                    }
+                } catch (err) {}
+            }
+        }
+
+        mcqHapticsReady = initMcqWebHaptics();
+        mcqHapticsReady.catch(() => {});
+
         function updateActivity(payload) {
             if (!isLoggedIn) return Promise.resolve();
             return fetch("/update-activity/", {
@@ -272,6 +295,35 @@
             .catch(err => console.error("Error:", err));
         }
 
+        // Dedicated MCQ haptics path (uses global R19 haptics first, native vibrate fallback second).
+        function triggerMcqHaptic(kind) {
+            const normalized = kind === 'error' ? 'error' : (kind === 'success' ? 'success' : 'selection');
+
+            try {
+                if (mcqWebHaptics && typeof mcqWebHaptics.trigger === 'function') {
+                    mcqWebHaptics.trigger(normalized);
+                    return;
+                }
+
+                if (window.R19Haptics && typeof window.R19Haptics.trigger === 'function') {
+                    window.R19Haptics.trigger(normalized);
+                    return;
+                }
+            } catch (err) {}
+
+            try {
+                if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+                    if (normalized === 'success') {
+                        navigator.vibrate([30, 60, 40]);
+                    } else if (normalized === 'error') {
+                        navigator.vibrate([40, 40, 40, 40, 40]);
+                    } else {
+                        navigator.vibrate(18);
+                    }
+                }
+            } catch (err) {}
+        }
+
         document.querySelectorAll('.answer-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const question = btn.closest('.question');
@@ -279,6 +331,10 @@
                     showLoginPrompt();
                     return;
                 }
+
+                // Immediate tap feedback on option press.
+                triggerMcqHaptic('selection');
+
                 const selectedAnswer = btn.dataset.answer;
                 const correctAnswer = question.dataset.answer;
                 const feedback = question.querySelector('.feedback');
@@ -294,10 +350,8 @@
                 feedback.className = `feedback mt-3 ${isCorrect ? 'correct' : 'wrong'}`;
                 feedback.style.display = "block";
 
-                // MCQ-specific semantic feedback on top of tap feedback.
-                if (window.R19Haptics && typeof window.R19Haptics.trigger === 'function') {
-                    window.R19Haptics.trigger(isCorrect ? 'success' : 'error');
-                }
+                // Semantic result feedback after evaluation.
+                triggerMcqHaptic(isCorrect ? 'success' : 'error');
 
                 setTimeout(() => feedback.style.display = "none", 2000);
             });
