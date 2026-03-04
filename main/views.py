@@ -77,6 +77,7 @@ _password_request_ready = False
 _chat_table_ready = False
 _ping_table_ready = False
 _chat_lock_ready = False
+_question_report_ready = False
 _CACHE_MISS = object()
 _question_columns_cache = None
 
@@ -309,6 +310,66 @@ def ensure_password_request_table():
         "ALTER TABLE password_reset_requests ADD COLUMN IF NOT EXISTS handled_at TIMESTAMPTZ;"
     )
     _password_request_ready = True
+
+
+def ensure_question_report_table():
+    """Create question_reports table for user-submitted answer correction tickets."""
+    global _question_report_ready
+    if _question_report_ready:
+        return
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS question_reports (
+            id SERIAL PRIMARY KEY,
+            question_id VARCHAR(255) NOT NULL,
+            reporter_user_id VARCHAR(255),
+            suggested_answer VARCHAR(120) NOT NULL,
+            notes TEXT,
+            current_answer VARCHAR(120),
+            status VARCHAR(20) DEFAULT 'open',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            reviewed_by VARCHAR(255),
+            reviewed_at TIMESTAMPTZ,
+            admin_notes TEXT
+        );
+        """
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS reporter_user_id VARCHAR(255);"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS suggested_answer VARCHAR(120);"
+    )
+    execute("ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS notes TEXT;")
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS current_answer VARCHAR(120);"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open';"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(255);"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;"
+    )
+    execute(
+        "ALTER TABLE question_reports ADD COLUMN IF NOT EXISTS admin_notes TEXT;"
+    )
+    execute(
+        "CREATE INDEX IF NOT EXISTS idx_question_reports_status_created ON question_reports (status, created_at DESC);"
+    )
+    execute(
+        "CREATE INDEX IF NOT EXISTS idx_question_reports_question_id ON question_reports (question_id);"
+    )
+    _question_report_ready = True
 
 def ensure_chat_table():
     """Create chat_messages table if missing."""
@@ -1741,6 +1802,68 @@ def check_answer(request):
 
 @csrf_exempt
 @require_POST
+def report_question(request):
+    """Create a question-answer correction ticket from the practice screen."""
+    ensure_question_report_table()
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "Please log in to report a question."}, status=401)
+
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            data = json.loads(request.body.decode("utf-8"))
+        else:
+            data = request.POST
+    except Exception:
+        data = {}
+
+    question_id = (data.get("question_id") or "").strip()
+    suggested_answer = (data.get("suggested_answer") or "").strip().upper()
+    notes = (data.get("notes") or "").strip()
+
+    if not question_id:
+        return JsonResponse({"error": "question_id is required."}, status=400)
+    if not suggested_answer:
+        return JsonResponse({"error": "Please share the answer you think is correct."}, status=400)
+    if len(suggested_answer) > 120:
+        return JsonResponse({"error": "Suggested answer is too long."}, status=400)
+    if notes and len(notes) > 1200:
+        return JsonResponse({"error": "Notes are too long (max 1200 chars)."}, status=400)
+
+    question = query_one(
+        "SELECT question_id, answer FROM questions WHERE question_id = %s",
+        (question_id,),
+    )
+    if not question:
+        return JsonResponse({"error": "Question not found."}, status=404)
+
+    inserted = query_one(
+        """
+        INSERT INTO question_reports (
+            question_id, reporter_user_id, suggested_answer, notes, current_answer, status, created_at, updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, 'open', NOW(), NOW())
+        RETURNING id
+        """,
+        (
+            question_id,
+            user_id,
+            suggested_answer,
+            notes or None,
+            (question.get("answer") or "").strip() or None,
+        ),
+    )
+    return JsonResponse(
+        {
+            "status": "ok",
+            "report_id": inserted.get("id") if inserted else None,
+            "message": "Report submitted. Admin will review it.",
+        }
+    )
+
+
+@csrf_exempt
+@require_POST
 def api_create_duel(request):
     """Create a duel and return the party code."""
     ensure_duel_tables()
@@ -2016,6 +2139,11 @@ def update_activity(request):
 def _normalize_answer(value: _t.Any) -> str:
     """Normalize answer text for resilient equality checks."""
     return " ".join(str(value or "").strip().lower().split())
+
+
+def _normalize_report_answer(value: _t.Any) -> str:
+    """Normalize answer text submitted in report flows."""
+    return " ".join(str(value or "").strip().upper().split())
 
 
 @staff_member_required
@@ -2327,6 +2455,212 @@ def staff_question_tester(request):
         "evaluation": evaluation,
     }
     return render(request, "staff_question_tester.html", context)
+
+
+@staff_member_required
+def staff_question_reports(request):
+    """Admin queue for question correction tickets."""
+    ensure_question_report_table()
+    valid_statuses = {"all", "open", "in_review", "resolved", "dismissed"}
+    status_filter = (request.GET.get("status") or "open").strip().lower()
+    if status_filter not in valid_statuses:
+        status_filter = "open"
+
+    where_sql = ""
+    params: _t.List[_t.Any] = []
+    if status_filter != "all":
+        where_sql = "WHERE qr.status = %s"
+        params.append(status_filter)
+
+    rows = query_all(
+        f"""
+        SELECT
+            qr.id,
+            qr.question_id,
+            qr.reporter_user_id,
+            qr.suggested_answer,
+            qr.notes,
+            qr.current_answer,
+            qr.status,
+            qr.created_at,
+            qr.updated_at,
+            qr.reviewed_by,
+            qr.reviewed_at,
+            qr.admin_notes,
+            q.answer AS live_answer,
+            q.session_code,
+            q.subtopic,
+            q.year,
+            u.name AS reporter_name,
+            u.email AS reporter_email
+        FROM question_reports qr
+        LEFT JOIN questions q ON q.question_id = qr.question_id
+        LEFT JOIN users u ON u.user_id = qr.reporter_user_id
+        {where_sql}
+        ORDER BY
+            CASE qr.status
+                WHEN 'open' THEN 0
+                WHEN 'in_review' THEN 1
+                WHEN 'resolved' THEN 2
+                WHEN 'dismissed' THEN 3
+                ELSE 4
+            END,
+            qr.created_at DESC
+        LIMIT 500
+        """,
+        tuple(params),
+    )
+
+    counts_rows = query_all(
+        """
+        SELECT status, COUNT(*) AS cnt
+        FROM question_reports
+        GROUP BY status
+        """
+    )
+    counts = {"all": 0, "open": 0, "in_review": 0, "resolved": 0, "dismissed": 0}
+    for row in counts_rows:
+        status = (row.get("status") or "").strip().lower()
+        if status in counts:
+            counts[status] = int(row.get("cnt", 0) or 0)
+    counts["all"] = counts["open"] + counts["in_review"] + counts["resolved"] + counts["dismissed"]
+
+    context = {
+        "reports": rows,
+        "status_filter": status_filter,
+        "counts": counts,
+        "status_options": [
+            ("open", "Open"),
+            ("in_review", "In review"),
+            ("resolved", "Resolved"),
+            ("dismissed", "Dismissed"),
+            ("all", "All"),
+        ],
+    }
+    return render(request, "staff_question_reports.html", context)
+
+
+@staff_member_required
+def staff_question_report_detail(request, report_id: int):
+    """Review one question correction ticket and optionally update canonical answer."""
+    ensure_question_report_table()
+    valid_statuses = {"open", "in_review", "resolved", "dismissed"}
+    reviewer = request.user.get_username() or "staff"
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip().lower()
+        admin_notes = (request.POST.get("admin_notes") or "").strip()
+
+        report_meta = query_one(
+            "SELECT id, question_id FROM question_reports WHERE id = %s",
+            (report_id,),
+        )
+        if not report_meta:
+            messages.error(request, "Question report not found.")
+            return redirect("staff_question_reports")
+
+        if action == "update_answer":
+            new_answer = _normalize_report_answer(request.POST.get("new_answer"))
+            if not new_answer:
+                messages.error(request, "Provide a valid answer before updating.")
+            else:
+                execute(
+                    "UPDATE questions SET answer = %s WHERE question_id = %s",
+                    (new_answer, report_meta.get("question_id")),
+                )
+                execute(
+                    """
+                    UPDATE question_reports
+                    SET status = 'resolved',
+                        current_answer = %s,
+                        admin_notes = %s,
+                        reviewed_by = %s,
+                        reviewed_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = %s
+                    """,
+                    (new_answer, admin_notes or None, reviewer, report_id),
+                )
+                messages.success(request, f"Question {report_meta.get('question_id')} answer updated to {new_answer}.")
+                return redirect("staff_question_report_detail", report_id=report_id)
+
+        elif action == "set_status":
+            new_status = (request.POST.get("status") or "").strip().lower()
+            if new_status not in valid_statuses:
+                messages.error(request, "Invalid status.")
+            else:
+                execute(
+                    """
+                    UPDATE question_reports
+                    SET status = %s,
+                        admin_notes = %s,
+                        reviewed_by = %s,
+                        reviewed_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = %s
+                    """,
+                    (new_status, admin_notes or None, reviewer, report_id),
+                )
+                messages.success(request, f"Report status changed to {new_status}.")
+                return redirect("staff_question_report_detail", report_id=report_id)
+        else:
+            messages.error(request, "Invalid action.")
+
+    report = query_one(
+        """
+        SELECT
+            qr.id,
+            qr.question_id,
+            qr.reporter_user_id,
+            qr.suggested_answer,
+            qr.notes,
+            qr.current_answer AS reported_current_answer,
+            qr.status,
+            qr.created_at,
+            qr.updated_at,
+            qr.reviewed_by,
+            qr.reviewed_at,
+            qr.admin_notes,
+            q.answer AS live_answer,
+            q.session_code,
+            q.session,
+            q.year,
+            q.paper_code,
+            q.variant,
+            q.subtopic,
+            q.file_question,
+            q.extracted_text,
+            q.image_base64,
+            q.image_url,
+            u.name AS reporter_name,
+            u.email AS reporter_email
+        FROM question_reports qr
+        LEFT JOIN questions q ON q.question_id = qr.question_id
+        LEFT JOIN users u ON u.user_id = qr.reporter_user_id
+        WHERE qr.id = %s
+        """,
+        (report_id,),
+    )
+
+    if not report:
+        messages.error(request, "Question report not found.")
+        return redirect("staff_question_reports")
+
+    report["image_src"] = build_question_image_src(
+        report.get("image_url"),
+        report.get("image_base64"),
+    )
+
+    context = {
+        "report": report,
+        "status_options": [
+            ("open", "Open"),
+            ("in_review", "In review"),
+            ("resolved", "Resolved"),
+            ("dismissed", "Dismissed"),
+        ],
+    }
+    return render(request, "staff_question_report_detail.html", context)
 
 
 @staff_member_required
