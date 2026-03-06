@@ -10,6 +10,7 @@ urlpatterns = [
     path('privacy/', views.privacy, name='privacy'),
     path('disclaimer/', views.disclaimer, name='disclaimer'),
     path('get-subtopics/', views.get_subtopics, name='get_subtopics'),
+    path('theme/preferences/', views.save_theme_preferences, name='save_theme_preferences'),
     path('practice-questions/', views.practice_questions, name='practice_questions'),
     path('check-answer/', views.check_answer, name='check_answer'),
     path('report-question/', views.report_question, name='report_question'),

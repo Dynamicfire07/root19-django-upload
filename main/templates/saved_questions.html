@@ -22,7 +22,10 @@
         <div class="container">
             <section class="question-stage-hero">
                 <div class="question-stage-copy">
-                    <span class="page-eyebrow">Saved Revision Queue</span>
+                    <div class="hero-topline">
+                        <span class="page-eyebrow">Saved Revision Queue</span>
+                        <span class="hero-signal"><span class="hero-signal-dot"></span>Review mode</span>
+                    </div>
                     <h1 class="page-title">Saved Studio</h1>
                     <p class="page-subtitle">
                         Revisit the questions you marked for review, answer them in a calmer workspace, and trim your queue as your confidence improves.
@@ -32,34 +35,70 @@
                         <span class="hero-chip hero-chip-soft">Starred + bookmarked</span>
                         <span class="hero-chip hero-chip-ghost">{{ saved|length }} in queue</span>
                     </div>
+
+                    <div class="hero-proof-list">
+                        <div class="hero-proof-item">
+                            <span class="hero-proof-icon"></span>
+                            <span>Your revision queue now keeps the answer path visible first and the supporting tools secondary.</span>
+                        </div>
+                        <div class="hero-proof-item">
+                            <span class="hero-proof-icon"></span>
+                            <span>Mark, unmark, and verify questions without leaving the focused review flow.</span>
+                        </div>
+                        <div class="hero-proof-item">
+                            <span class="hero-proof-icon"></span>
+                            <span>Quick-answer controls stay close on smaller screens so saved review does not become scroll-heavy.</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="question-stage-summary">
-                    <div class="hero-metric-grid">
-                        <div class="hero-metric-card">
-                            <span class="hero-metric-label">Answered</span>
-                            <span class="hero-metric-value" id="summaryAnswered">0</span>
+                    <div class="hero-briefing-card">
+                        <div class="hero-briefing-head">
+                            <div>
+                                <div class="hero-progress-label">Revision Briefing</div>
+                                <div class="hero-briefing-title">Review with less friction</div>
+                            </div>
+                            <span class="hero-floating-badge">Saved queue</span>
                         </div>
-                        <div class="hero-metric-card">
-                            <span class="hero-metric-label">Still Saved</span>
-                            <span class="hero-metric-value" id="summarySaved">0</span>
-                        </div>
-                    </div>
 
-                    <div class="hero-progress-panel">
-                        <div class="hero-progress-top">
+                        <div class="hero-briefing-focus">
                             <div>
                                 <div class="hero-progress-label">Current Position</div>
                                 <div class="hero-progress-value" id="heroCurrentQuestion">
                                     {% if saved %}1 / {{ saved|length }}{% else %}0 / 0{% endif %}
                                 </div>
                             </div>
+                            <div class="hero-focus-ring">
+                                <span class="hero-focus-value">{{ saved|length }}</span>
+                                <span class="hero-focus-label">Queued</span>
+                            </div>
                         </div>
+
                         <div class="hero-progress-bar">
                             <span id="heroProgressBar"></span>
                         </div>
-                        <div class="hero-shortcuts">
-                            Use <strong>A-D</strong> to answer and <strong>&larr;</strong> or <strong>&rarr;</strong> to move through your saved queue without leaving the page.
+
+                        <div class="hero-stat-strip">
+                            <div class="hero-stat-panel">
+                                <span class="hero-stat-panel-label">Answered</span>
+                                <span class="hero-stat-panel-value" id="summaryAnswered">0</span>
+                            </div>
+                            <div class="hero-stat-panel">
+                                <span class="hero-stat-panel-label">Still Saved</span>
+                                <span class="hero-stat-panel-value" id="summarySaved">0</span>
+                            </div>
+                        </div>
+
+                        <div class="hero-guidance-list">
+                            <div class="hero-guidance-item">
+                                <span class="hero-guidance-dot"></span>
+                                <span>Use <strong>A-D</strong> or the pinned answer dock to work through saved questions quickly.</span>
+                            </div>
+                            <div class="hero-guidance-item">
+                                <span class="hero-guidance-dot"></span>
+                                <span>Remove a question from the queue by clearing both star and bookmark once you no longer need it.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,6 +128,25 @@
                         <span>Next question</span>
                         <i class="bi bi-arrow-right"></i>
                     </button>
+                </div>
+
+                <div class="mobile-answer-dock" id="mobileAnswerDock">
+                    <div class="mobile-answer-dock-top">
+                        <div class="mobile-answer-context">
+                            <span class="mobile-answer-label" id="mobileDockQuestion">Question 1</span>
+                            <span class="mobile-answer-feedback" id="mobileDockFeedback">Tap an option below to answer instantly.</span>
+                        </div>
+                        <button id="mobileNextBtn" class="mobile-next-btn" type="button">
+                            <span>Next question</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                    <div class="mobile-answer-grid">
+                        <button class="mobile-answer-btn" type="button" data-answer="A">A</button>
+                        <button class="mobile-answer-btn" type="button" data-answer="B">B</button>
+                        <button class="mobile-answer-btn" type="button" data-answer="C">C</button>
+                        <button class="mobile-answer-btn" type="button" data-answer="D">D</button>
+                    </div>
                 </div>
             {% else %}
                 <section class="question-stage-empty">
@@ -137,6 +195,11 @@
             const heroProgressBar = document.getElementById("heroProgressBar");
             const summaryAnswered = document.getElementById("summaryAnswered");
             const summarySaved = document.getElementById("summarySaved");
+            const mobileAnswerDock = document.getElementById("mobileAnswerDock");
+            const mobileNextBtn = document.getElementById("mobileNextBtn");
+            const mobileDockQuestion = document.getElementById("mobileDockQuestion");
+            const mobileDockFeedback = document.getElementById("mobileDockFeedback");
+            const mobileDockButtons = mobileAnswerDock ? Array.from(mobileAnswerDock.querySelectorAll(".mobile-answer-btn")) : [];
             const revealModalEl = document.getElementById("revealAnswerModal");
             const revealModal = revealModalEl ? new bootstrap.Modal(revealModalEl) : null;
             let currentIndex = 0;
@@ -249,6 +312,52 @@
                 syncFeedback(questionEl);
             }
 
+            function syncMobileDock(questionEl) {
+                if (!mobileAnswerDock || !questionEl) return;
+
+                const status = questionEl.dataset.status || "idle";
+                const selectedAnswer = questionEl.dataset.selectedAnswer || "";
+                const correctAnswer = questionEl.dataset.answer || "";
+                const answered = questionEl.dataset.answered === "true";
+
+                if (mobileDockQuestion) {
+                    mobileDockQuestion.textContent = `Question ${currentIndex + 1} · ${questionEl.dataset.questionId || ""}`;
+                }
+
+                if (mobileDockFeedback) {
+                    if (status === "correct") {
+                        mobileDockFeedback.textContent = `Correct. ${selectedAnswer} locked in.`;
+                    } else if (status === "wrong") {
+                        mobileDockFeedback.textContent = `${selectedAnswer} was wrong. Correct answer: ${correctAnswer}.`;
+                    } else if (status === "revealed") {
+                        mobileDockFeedback.textContent = `Answer revealed: ${correctAnswer}.`;
+                    } else {
+                        mobileDockFeedback.textContent = "Tap an option below to answer instantly.";
+                    }
+                }
+
+                mobileDockButtons.forEach((btn) => {
+                    const value = btn.dataset.answer;
+                    btn.classList.remove("is-selected", "is-correct", "is-wrong", "is-correct-answer");
+                    btn.disabled = answered;
+
+                    if (selectedAnswer && value === selectedAnswer) {
+                        btn.classList.add("is-selected");
+                    }
+
+                    if (answered) {
+                        if (value === correctAnswer) {
+                            btn.classList.add(selectedAnswer === correctAnswer ? "is-correct" : "is-correct-answer");
+                        }
+                        if (selectedAnswer && value === selectedAnswer && selectedAnswer !== correctAnswer) {
+                            btn.classList.add("is-wrong");
+                        }
+                    } else if (status === "revealed" && value === correctAnswer) {
+                        btn.classList.add("is-correct-answer");
+                    }
+                });
+            }
+
             function updateSummaryMetrics() {
                 const answeredCount = questions.filter((questionEl) => questionEl.dataset.answered === "true").length;
                 const savedCount = questions.filter((questionEl) => questionEl.dataset.starred === "true" || questionEl.dataset.bookmarked === "true").length;
@@ -284,6 +393,12 @@
                 } else {
                     setHint("Select an answer to get instant feedback.");
                 }
+
+                if (mobileNextBtn) {
+                    mobileNextBtn.disabled = nextBtn.disabled;
+                    mobileNextBtn.innerHTML = nextBtn.innerHTML;
+                }
+                syncMobileDock(currentQuestion);
             }
 
             function showQuestion(index, options = {}) {
@@ -389,6 +504,14 @@
                 if (currentIndex >= totalQuestions - 1) return;
                 showQuestion(currentIndex + 1, { smooth: true });
             });
+
+            mobileDockButtons.forEach((btn) => {
+                btn.addEventListener("click", () => handleAnswer(getCurrentQuestion(), btn.dataset.answer));
+            });
+
+            if (mobileNextBtn) {
+                mobileNextBtn.addEventListener("click", () => nextBtn.click());
+            }
 
             document.addEventListener("keydown", (event) => {
                 if (event.defaultPrevented) return;

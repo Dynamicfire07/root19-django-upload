@@ -31,6 +31,9 @@ class User(models.Model):
     role = models.CharField(max_length=50)
     school = models.CharField(max_length=255)
     champion_theme_access = models.BooleanField(default=False)
+    champion_theme = models.CharField(max_length=20, default="gold")
+    champion_theme_mode = models.BooleanField(default=False)
+    champion_theme_auto_awarded = models.BooleanField(default=False)
     
     class Meta:
         db_table = "users"

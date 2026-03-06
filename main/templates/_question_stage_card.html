@@ -64,56 +64,17 @@
         </div>
       </div>
 
-      <div class="question-action-dock">
-        <button class="action-button side-button star {% if question.starred %}active{% endif %}" type="button" title="Star question">
-          <span class="action-button-icon"><i class="bi bi-star-fill"></i></span>
-          <span class="action-button-copy">
-            <strong>Star</strong>
-            <small>Keep it close for review</small>
-          </span>
-        </button>
-
-        <button class="action-button side-button bookmark {% if question.bookmarked %}active{% endif %}" type="button" title="Bookmark question">
-          <span class="action-button-icon"><i class="bi bi-bookmark-fill"></i></span>
-          <span class="action-button-copy">
-            <strong>Bookmark</strong>
-            <small>Save it to your queue</small>
-          </span>
-        </button>
-
-        <button class="action-button side-button reveal" type="button" title="Reveal answer">
-          <span class="action-button-icon"><i class="bi bi-eye-fill"></i></span>
-          <span class="action-button-copy">
-            <strong>Reveal</strong>
-            <small>See the correct answer</small>
-          </span>
-        </button>
-
-        {% if mode == "practice" %}
-          <button class="action-button share-chat-btn" type="button" title="Send to Community Chat">
-            <span class="action-button-icon"><i class="bi bi-people-fill"></i></span>
-            <span class="action-button-copy">
-              <strong>Share</strong>
-              <small>Send it to Community Chat</small>
-            </span>
-          </button>
-
-          <button class="action-button side-button report" type="button" title="Report question">
-            <span class="action-button-icon"><i class="bi bi-flag-fill"></i></span>
-            <span class="action-button-copy">
-              <strong>Report</strong>
-              <small>Flag an answer issue</small>
-            </span>
-          </button>
-        {% endif %}
-      </div>
-
       <div class="answer-block">
         <div class="answer-block-head">
           <div>
             <div class="block-kicker">Answer Options</div>
             <p class="panel-copy">Choose one option. You can also use A-D on desktop.</p>
           </div>
+        </div>
+
+        <div class="answer-primary-note">
+          <i class="bi bi-hand-index-thumb"></i>
+          <span>Quick answer bar pinned below. Tap there anytime without scrolling.</span>
         </div>
 
         <div class="answer-grid">
@@ -158,6 +119,53 @@
           <div class="feedback-label">Live Feedback</div>
           <div class="feedback-title" data-role="feedback-title">Select an answer to see your result.</div>
           <div class="feedback-detail" data-role="feedback-detail">Your result stays visible while you move through the set.</div>
+        </div>
+      </div>
+
+      <div class="utility-block">
+        <div class="block-kicker">Secondary Tools</div>
+        <div class="question-action-dock">
+          <button class="action-button side-button star {% if question.starred %}active{% endif %}" type="button" title="Star question">
+            <span class="action-button-icon"><i class="bi bi-star-fill"></i></span>
+            <span class="action-button-copy">
+              <strong>Star</strong>
+              <small>Keep it close for review</small>
+            </span>
+          </button>
+
+          <button class="action-button side-button bookmark {% if question.bookmarked %}active{% endif %}" type="button" title="Bookmark question">
+            <span class="action-button-icon"><i class="bi bi-bookmark-fill"></i></span>
+            <span class="action-button-copy">
+              <strong>Bookmark</strong>
+              <small>Save it to your queue</small>
+            </span>
+          </button>
+
+          <button class="action-button side-button reveal" type="button" title="Reveal answer">
+            <span class="action-button-icon"><i class="bi bi-eye-fill"></i></span>
+            <span class="action-button-copy">
+              <strong>Reveal</strong>
+              <small>See the correct answer</small>
+            </span>
+          </button>
+
+          {% if mode == "practice" %}
+            <button class="action-button share-chat-btn" type="button" title="Send to Community Chat">
+              <span class="action-button-icon"><i class="bi bi-people-fill"></i></span>
+              <span class="action-button-copy">
+                <strong>Share</strong>
+                <small>Send it to Community Chat</small>
+              </span>
+            </button>
+
+            <button class="action-button side-button report" type="button" title="Report question">
+              <span class="action-button-icon"><i class="bi bi-flag-fill"></i></span>
+              <span class="action-button-copy">
+                <strong>Report</strong>
+                <small>Flag an answer issue</small>
+              </span>
+            </button>
+          {% endif %}
         </div>
       </div>
     </aside>

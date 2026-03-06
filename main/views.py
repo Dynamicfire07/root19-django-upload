@@ -46,6 +46,23 @@ def generate_temp_password(length: int = 12) -> str:
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
+
+def normalize_champion_theme(theme: _t.Any, *, fallback: str = "gold") -> str | None:
+    """Normalize a champion theme name or return fallback/None when invalid."""
+    normalized = (theme or "").strip().lower()
+    if not normalized:
+        return fallback
+    if normalized in {"gold", "emerald", "sapphire"}:
+        return normalized
+    return None
+
+
+def coerce_theme_mode(value: _t.Any) -> bool:
+    """Convert common truthy strings to a boolean theme mode flag."""
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "on", "yes"}
+
 from .db import (
     query_one,
     query_all,
@@ -71,6 +88,8 @@ SUBTOPIC_CACHE_TTL = 600
 API_OPTIONS_CACHE_KEY = "api_options_reference"
 API_OPTIONS_TTL = 600
 PRACTICE_QUESTION_LIMIT = 40  # cap to avoid loading all questions at once
+DEFAULT_CHAMPION_THEME = "gold"
+ALLOWED_CHAMPION_THEMES = ("gold", "emerald", "sapphire")
 
 _study_progress_ready = False
 _password_request_ready = False
@@ -78,8 +97,38 @@ _chat_table_ready = False
 _ping_table_ready = False
 _chat_lock_ready = False
 _question_report_ready = False
+_champion_access_ready = False
+_champion_theme_preferences_ready = False
 _CACHE_MISS = object()
 _question_columns_cache = None
+
+
+def _theme_session_snapshot(row: dict | None) -> dict[str, _t.Any]:
+    """Build the session-facing theme state for a user row."""
+    row = row or {}
+    has_access = bool(row.get("champion_theme_access"))
+    return {
+        "champion_access": has_access,
+        "champion_name": row.get("name") or row.get("email") or None,
+        "champion_theme": normalize_champion_theme(
+            row.get("champion_theme"),
+            fallback=DEFAULT_CHAMPION_THEME,
+        ) or DEFAULT_CHAMPION_THEME,
+        "champion_mode": bool(row.get("champion_theme_mode")),
+    }
+
+
+def sync_theme_session(request, row: dict | None) -> dict[str, _t.Any]:
+    """Persist champion-theme session state for the current request."""
+    snapshot = _theme_session_snapshot(row)
+    request.session["champion_access"] = snapshot["champion_access"]
+    request.session["champion_theme"] = snapshot["champion_theme"]
+    request.session["champion_mode"] = snapshot["champion_mode"]
+    if snapshot["champion_access"] and snapshot["champion_name"]:
+        request.session["champion_name"] = snapshot["champion_name"]
+    else:
+        request.session.pop("champion_name", None)
+    return snapshot
 
 # -------------------------
 # AUTHENTICATION
@@ -88,7 +137,7 @@ _question_columns_cache = None
 def register(request):
     """Handle user registration."""
     if request.method == 'POST':
-        ensure_champion_access_field()
+        ensure_champion_theme_preference_fields()
         name = request.POST['name']
         email = request.POST['email']
         password = request.POST['password']
@@ -112,8 +161,11 @@ def register(request):
         # Insert user
         execute(
             """
-            INSERT INTO users (user_id, name, email, password, role, school, champion_theme_access)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (
+                user_id, name, email, password, role, school,
+                champion_theme_access, champion_theme, champion_theme_mode, champion_theme_auto_awarded
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 get_next_user_id(),
@@ -122,6 +174,9 @@ def register(request):
                 hashed_password,
                 role,
                 school,
+                False,
+                DEFAULT_CHAMPION_THEME,
+                False,
                 False,
             ),
         )
@@ -134,7 +189,7 @@ def register(request):
 def login_view(request):
     """Handle login using the users table."""
     if request.method == 'POST':
-        ensure_champion_access_field()
+        ensure_champion_theme_preference_fields()
         email = request.POST['email']
         password = request.POST['password']
         remember_me = request.POST.get('remember_me') == 'on'
@@ -150,9 +205,7 @@ def login_view(request):
             else:
                 # Expire when browser closes
                 request.session.set_expiry(0)
-            request.session['champion_access'] = bool(user.get('champion_theme_access'))
-            if user.get('champion_theme_access'):
-                request.session['champion_name'] = user.get('name') or user.get('email')
+            sync_theme_session(request, user)
 
             messages.success(request, f"Welcome back, {user['name']}!")
             return redirect('home')
@@ -250,18 +303,67 @@ def home(request):
     # Refresh session flags based on champion rotation
     session_user_id = request.session.get("user_id")
     if session_user_id:
+        ensure_champion_theme_preference_fields()
         user = query_one(
-            "SELECT name, champion_theme_access FROM users WHERE user_id = %s",
-            (session_user_id,),
+            """
+            SELECT
+                name,
+                email,
+                champion_theme_access,
+                COALESCE(champion_theme, %s) AS champion_theme,
+                COALESCE(champion_theme_mode, FALSE) AS champion_theme_mode
+            FROM users
+            WHERE user_id = %s
+            """,
+            (DEFAULT_CHAMPION_THEME, session_user_id),
         ) or {}
-        has_access = bool(user.get("champion_theme_access"))
-        request.session["champion_access"] = has_access
-        if has_access:
-            request.session["champion_name"] = user.get("name") or champion.get("name") if champion else user.get("name")
-        else:
-            request.session.pop("champion_name", None)
+        sync_theme_session(request, user)
 
     return render(request, 'home.html', {'total_questions': total_questions})
+
+
+@require_POST
+def save_theme_preferences(request):
+    """Persist champion-theme preferences for the current user or staff preview session."""
+    ensure_champion_theme_preference_fields()
+
+    is_staff = bool(getattr(getattr(request, "user", None), "is_staff", False))
+    has_access = bool(request.session.get("champion_access")) or is_staff
+    if not has_access:
+        return JsonResponse({"error": "Champion theme access required."}, status=403)
+
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            payload = json.loads(request.body.decode("utf-8"))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+    else:
+        payload = request.POST
+
+    theme = normalize_champion_theme(
+        payload.get("theme"),
+        fallback=request.session.get("champion_theme") or DEFAULT_CHAMPION_THEME,
+    )
+    if theme is None:
+        return JsonResponse(
+            {"error": f"Invalid theme. Use one of: {', '.join(ALLOWED_CHAMPION_THEMES)}."},
+            status=400,
+        )
+
+    mode = coerce_theme_mode(payload.get("mode"))
+    request.session["champion_theme"] = theme
+    request.session["champion_mode"] = mode
+    if is_staff:
+        request.session["champion_access"] = True
+
+    user_id = request.session.get("user_id")
+    if user_id:
+        execute(
+            "UPDATE users SET champion_theme = %s, champion_theme_mode = %s WHERE user_id = %s",
+            (theme, mode, user_id),
+        )
+
+    return JsonResponse({"status": "ok", "theme": theme, "mode": mode})
 
 
 def ensure_study_progress_table():
@@ -464,9 +566,41 @@ def set_chat_lock(locked: bool, password: str | None, existing_hash: str | None 
 
 def ensure_champion_access_field():
     """Ensure champion_theme_access exists on users."""
+    global _champion_access_ready
+    if _champion_access_ready:
+        return
     execute(
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme_access BOOLEAN DEFAULT FALSE;"
     )
+    _champion_access_ready = True
+
+
+def ensure_champion_theme_preference_fields():
+    """Ensure champion theme preference fields exist on users."""
+    global _champion_theme_preferences_ready
+    if _champion_theme_preferences_ready:
+        return
+    ensure_champion_access_field()
+    execute(
+        f"ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme VARCHAR(20) DEFAULT '{DEFAULT_CHAMPION_THEME}';"
+    )
+    execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme_mode BOOLEAN DEFAULT FALSE;"
+    )
+    execute(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS champion_theme_auto_awarded BOOLEAN DEFAULT FALSE;"
+    )
+    execute(
+        "UPDATE users SET champion_theme = %s WHERE champion_theme IS NULL OR champion_theme = '';",
+        (DEFAULT_CHAMPION_THEME,),
+    )
+    execute(
+        "UPDATE users SET champion_theme_mode = FALSE WHERE champion_theme_mode IS NULL;"
+    )
+    execute(
+        "UPDATE users SET champion_theme_auto_awarded = FALSE WHERE champion_theme_auto_awarded IS NULL;"
+    )
+    _champion_theme_preferences_ready = True
 
 # -------------------------
 # DUELS
@@ -744,7 +878,7 @@ def update_weekly_champion():
     if cached is not _CACHE_MISS:
         return cached
 
-    ensure_champion_access_field()
+    ensure_champion_theme_preference_fields()
 
     top = query_one(
         """
@@ -764,13 +898,28 @@ def update_weekly_champion():
     )
 
     if not top:
+        execute(
+            "UPDATE users SET champion_theme_access = FALSE, champion_theme_auto_awarded = FALSE WHERE champion_theme_auto_awarded = TRUE"
+        )
         cache.set(CHAMPION_CACHE_KEY, None, CHAMPION_CACHE_TTL)
         return None
 
     winner_id = top.get("user_id")
 
     execute(
-        "UPDATE users SET champion_theme_access = TRUE WHERE user_id = %s",
+        """
+        UPDATE users
+        SET champion_theme_access = FALSE, champion_theme_auto_awarded = FALSE
+        WHERE champion_theme_auto_awarded = TRUE AND user_id <> %s
+        """,
+        (winner_id,),
+    )
+    execute(
+        """
+        UPDATE users
+        SET champion_theme_access = TRUE, champion_theme_auto_awarded = TRUE
+        WHERE user_id = %s
+        """,
         (winner_id,),
     )
 
@@ -2852,7 +3001,7 @@ def staff_password_requests(request):
 @staff_member_required
 def staff_theme_access(request):
     """Admin view to preview and toggle champion theme access."""
-    ensure_champion_access_field()
+    ensure_champion_theme_preference_fields()
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -2862,18 +3011,33 @@ def staff_theme_access(request):
             return redirect("staff_theme_access")
         new_value = action == "grant"
         execute(
-            "UPDATE users SET champion_theme_access = %s WHERE user_id = %s",
+            """
+            UPDATE users
+            SET champion_theme_access = %s, champion_theme_auto_awarded = FALSE
+            WHERE user_id = %s
+            """,
             (new_value, user_id),
         )
+        cache.delete(CHAMPION_CACHE_KEY)
         messages.success(request, f"Theme access {'granted' if new_value else 'revoked'} for {user_id}.")
         return redirect("staff_theme_access")
 
     users = query_all(
         """
-        SELECT user_id, name, email, role, school, COALESCE(champion_theme_access, FALSE) AS champion_theme_access
+        SELECT
+            user_id,
+            name,
+            email,
+            role,
+            school,
+            COALESCE(champion_theme_access, FALSE) AS champion_theme_access,
+            COALESCE(champion_theme_auto_awarded, FALSE) AS champion_theme_auto_awarded,
+            COALESCE(champion_theme, %s) AS champion_theme,
+            COALESCE(champion_theme_mode, FALSE) AS champion_theme_mode
         FROM users
-        ORDER BY champion_theme_access DESC, name, email
-        """
+        ORDER BY champion_theme_access DESC, champion_theme_auto_awarded DESC, name, email
+        """,
+        (DEFAULT_CHAMPION_THEME,),
     )
     return render(request, "staff_theme_access.html", {"users": users})
 
