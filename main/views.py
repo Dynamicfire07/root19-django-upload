@@ -923,9 +923,23 @@ def practice_questions(request):
         """,
         tuple(params + [limit]),
     )
-    apply_question_image_src_to_rows(docs)
-
     user_id = request.session.get('user_id') or ""
+    apply_question_image_src_to_rows(docs)
+    if user_id and docs:
+        activity_rows = query_all(
+            """
+            SELECT question_id, bookmarked, starred
+            FROM user_activity
+            WHERE user_id = %s AND question_id = ANY(%s)
+            """,
+            (user_id, [doc["question_id"] for doc in docs]),
+        )
+        activity_by_question = {row["question_id"]: row for row in activity_rows}
+        for doc in docs:
+            activity = activity_by_question.get(doc["question_id"], {})
+            doc["bookmarked"] = bool(activity.get("bookmarked"))
+            doc["starred"] = bool(activity.get("starred"))
+
     guest_limit = None
     if not user_id:
         guest_limit = 2

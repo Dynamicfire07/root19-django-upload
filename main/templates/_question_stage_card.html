@@ -1,0 +1,165 @@
+<div
+  class="question question-stage-card"
+  data-question-id="{{ question.question_id }}"
+  data-answer="{{ question.answer }}"
+  data-image-src="{{ question.image_src|default:'' }}"
+  data-bookmarked="{{ question.bookmarked|yesno:'true,false' }}"
+  data-starred="{{ question.starred|yesno:'true,false' }}"
+  data-status="idle"
+  data-selected-answer=""
+  data-answered="false"
+  style="display:none;"
+>
+  <div class="question-stage-grid">
+    <section class="question-visual-panel">
+      <div class="question-panel-top">
+        <div>
+          <div class="question-step-badge">Question {{ forloop.counter }}</div>
+          <h2 class="question-heading">{{ question.session_code|default:"Mixed Practice" }}</h2>
+          <p class="question-copy">
+            {% if question.subtopic %}
+              {{ question.subtopic }}
+            {% else %}
+              Focus on the prompt, decide quickly, and lock one option with confidence.
+            {% endif %}
+          </p>
+        </div>
+        <span class="question-status-pill" data-role="status-pill" data-status="idle">Awaiting answer</span>
+      </div>
+
+      <div class="question-chip-row">
+        {% if question.session_code %}
+          <span class="question-chip">{{ question.session_code }}</span>
+        {% endif %}
+        {% if question.subtopic %}
+          <span class="question-chip question-chip-soft">{{ question.subtopic }}</span>
+        {% endif %}
+        <span class="question-chip question-chip-ghost">ID {{ question.question_id }}</span>
+      </div>
+
+      <div class="question-media-frame">
+        {% if question.image_src %}
+          <img src="{{ question.image_src }}" alt="Question Image">
+        {% else %}
+          <div class="question-empty-state">
+            <i class="bi bi-image"></i>
+            <div>Question preview unavailable</div>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="question-response-panel">
+      <div class="question-panel-top">
+        <div>
+          <div class="block-kicker">{% if mode == "saved" %}Saved Queue{% else %}Answer Studio{% endif %}</div>
+          <h3 class="panel-title">Choose one answer with clarity</h3>
+          <p class="panel-copy">
+            {% if mode == "saved" %}
+              Revisit your saved set, verify your instinct, and keep only the questions worth reviewing again.
+            {% else %}
+              Use the utility actions below, then answer once. Feedback stays visible while you move through the set.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="question-action-dock">
+        <button class="action-button side-button star {% if question.starred %}active{% endif %}" type="button" title="Star question">
+          <span class="action-button-icon"><i class="bi bi-star-fill"></i></span>
+          <span class="action-button-copy">
+            <strong>Star</strong>
+            <small>Keep it close for review</small>
+          </span>
+        </button>
+
+        <button class="action-button side-button bookmark {% if question.bookmarked %}active{% endif %}" type="button" title="Bookmark question">
+          <span class="action-button-icon"><i class="bi bi-bookmark-fill"></i></span>
+          <span class="action-button-copy">
+            <strong>Bookmark</strong>
+            <small>Save it to your queue</small>
+          </span>
+        </button>
+
+        <button class="action-button side-button reveal" type="button" title="Reveal answer">
+          <span class="action-button-icon"><i class="bi bi-eye-fill"></i></span>
+          <span class="action-button-copy">
+            <strong>Reveal</strong>
+            <small>See the correct answer</small>
+          </span>
+        </button>
+
+        {% if mode == "practice" %}
+          <button class="action-button share-chat-btn" type="button" title="Send to Community Chat">
+            <span class="action-button-icon"><i class="bi bi-people-fill"></i></span>
+            <span class="action-button-copy">
+              <strong>Share</strong>
+              <small>Send it to Community Chat</small>
+            </span>
+          </button>
+
+          <button class="action-button side-button report" type="button" title="Report question">
+            <span class="action-button-icon"><i class="bi bi-flag-fill"></i></span>
+            <span class="action-button-copy">
+              <strong>Report</strong>
+              <small>Flag an answer issue</small>
+            </span>
+          </button>
+        {% endif %}
+      </div>
+
+      <div class="answer-block">
+        <div class="answer-block-head">
+          <div>
+            <div class="block-kicker">Answer Options</div>
+            <p class="panel-copy">Choose one option. You can also use A-D on desktop.</p>
+          </div>
+        </div>
+
+        <div class="answer-grid">
+          <button class="answer-btn" data-answer="A" type="button">
+            <span class="answer-badge">A</span>
+            <span class="answer-content">
+              <strong>Option A</strong>
+              <small>Lock this answer in</small>
+            </span>
+            <span class="answer-shortcut">A</span>
+          </button>
+
+          <button class="answer-btn" data-answer="B" type="button">
+            <span class="answer-badge">B</span>
+            <span class="answer-content">
+              <strong>Option B</strong>
+              <small>Lock this answer in</small>
+            </span>
+            <span class="answer-shortcut">B</span>
+          </button>
+
+          <button class="answer-btn" data-answer="C" type="button">
+            <span class="answer-badge">C</span>
+            <span class="answer-content">
+              <strong>Option C</strong>
+              <small>Lock this answer in</small>
+            </span>
+            <span class="answer-shortcut">C</span>
+          </button>
+
+          <button class="answer-btn" data-answer="D" type="button">
+            <span class="answer-badge">D</span>
+            <span class="answer-content">
+              <strong>Option D</strong>
+              <small>Lock this answer in</small>
+            </span>
+            <span class="answer-shortcut">D</span>
+          </button>
+        </div>
+
+        <div class="feedback-panel" data-role="feedback" data-tone="idle" aria-live="polite">
+          <div class="feedback-label">Live Feedback</div>
+          <div class="feedback-title" data-role="feedback-title">Select an answer to see your result.</div>
+          <div class="feedback-detail" data-role="feedback-detail">Your result stays visible while you move through the set.</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
