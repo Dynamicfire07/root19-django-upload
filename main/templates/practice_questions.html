@@ -22,13 +22,10 @@
         <div class="container">
             <section class="question-stage-hero">
                 <div class="question-stage-copy">
-                    <div class="hero-topline">
-                        <span class="page-eyebrow">Premium Practice Flow</span>
-                        <span class="hero-signal"><span class="hero-signal-dot"></span>Answer-first mode</span>
-                    </div>
-                    <h1 class="page-title">Question Studio</h1>
+                    <span class="page-eyebrow">Practice</span>
+                    <h1 class="page-title">One question at a time.</h1>
                     <p class="page-subtitle">
-                        A calmer, sharper answering flow with instant feedback, richer context, and quicker actions around every question.
+                        A quieter practice screen with only the context you need and faster answer flow.
                     </p>
                     <div class="hero-chip-row">
                         <span class="hero-chip">
@@ -41,25 +38,9 @@
                         {% if request.GET.subtopic %}
                             <span class="hero-chip hero-chip-soft">{{ request.GET.subtopic }}</span>
                         {% endif %}
-                        <span class="hero-chip hero-chip-ghost">{{ questions|length }} queued</span>
                         {% if not user_id %}
                             <span class="hero-chip hero-chip-warning">Guest preview · {{ limit|default:2 }} questions</span>
                         {% endif %}
-                    </div>
-
-                    <div class="hero-proof-list">
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-icon"></span>
-                            <span>MCQ controls stay within reach, so you can answer without dropping out of the question flow.</span>
-                        </div>
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-icon"></span>
-                            <span>Progress, saved state, and answer feedback update live while you move through the set.</span>
-                        </div>
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-icon"></span>
-                            <span>Share, reveal, and report tools stay available, but the answer path now stays primary.</span>
-                        </div>
                     </div>
                 </div>
 
@@ -67,23 +48,12 @@
                     <div class="hero-briefing-card">
                         <div class="hero-briefing-head">
                             <div>
-                                <div class="hero-progress-label">Session Briefing</div>
-                                <div class="hero-briefing-title">Stay in flow</div>
-                            </div>
-                            <span class="hero-floating-badge">{% if user_id %}Live set{% else %}Guest preview{% endif %}</span>
-                        </div>
-
-                        <div class="hero-briefing-focus">
-                            <div>
-                                <div class="hero-progress-label">Current Position</div>
-                                <div class="hero-progress-value" id="heroCurrentQuestion">
+                                <div class="hero-progress-label">Progress</div>
+                                <div class="hero-briefing-title" id="heroCurrentQuestion">
                                     {% if questions %}1 / {{ questions|length }}{% else %}0 / 0{% endif %}
                                 </div>
                             </div>
-                            <div class="hero-focus-ring">
-                                <span class="hero-focus-value">{{ questions|length }}</span>
-                                <span class="hero-focus-label">Queued</span>
-                            </div>
+                            <span class="hero-floating-badge">{% if user_id %}Live set{% else %}Preview{% endif %}</span>
                         </div>
 
                         <div class="hero-progress-bar">
@@ -96,21 +66,12 @@
                                 <span class="hero-stat-panel-value" id="summaryAnswered">0</span>
                             </div>
                             <div class="hero-stat-panel">
-                                <span class="hero-stat-panel-label">Marked</span>
+                                <span class="hero-stat-panel-label">Saved</span>
                                 <span class="hero-stat-panel-value" id="summarySaved">0</span>
                             </div>
                         </div>
 
-                        <div class="hero-guidance-list">
-                            <div class="hero-guidance-item">
-                                <span class="hero-guidance-dot"></span>
-                                <span>Use <strong>A-D</strong> on desktop or the pinned mobile answer dock for one-tap responses.</span>
-                            </div>
-                            <div class="hero-guidance-item">
-                                <span class="hero-guidance-dot"></span>
-                                <span>The next-step control stays close, so you can move question to question without extra scrolling.</span>
-                            </div>
-                        </div>
+                        <p class="hero-guidance-inline">Use A-D on desktop or the pinned answer bar on mobile.</p>
                     </div>
                 </div>
             </section>
