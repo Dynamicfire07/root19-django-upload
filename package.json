@@ -1,0 +1,25 @@
+{
+  "name": "root_19-2",
+  "version": "1.0.0",
+  "description": "A web-based quiz application built with Django that allows users to register, log in, practice questions, and track progress. This project features a dynamic and user-friendly interface, including a hero section, session-based authentication, and animated feedback.",
+  "scripts": {
+    "test": "npm run test:e2e",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dynamicfire07/root19-django-upload.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Dynamicfire07/root19-django-upload/issues"
+  },
+  "homepage": "https://github.com/Dynamicfire07/root19-django-upload#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

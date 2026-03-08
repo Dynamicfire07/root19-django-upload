@@ -1,4 +1,9 @@
 {% load static tz %}
+<link rel="stylesheet" href="{% static 'main/css/premium-ui.css' %}">
+<div class="premium-cursor" aria-hidden="true" data-testid="custom-cursor" hidden>
+  <div class="premium-cursor__ring" data-testid="custom-cursor-ring"></div>
+  <div class="premium-cursor__dot" data-testid="custom-cursor-dot"></div>
+</div>
 <footer class="mt-auto py-4 bg-light border-top">
   <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
     <div class="text-muted small">
@@ -14,4 +19,5 @@
 <script>
   window.R19_HAPTICS_LIB_URL = "{% static 'main/vendor/web-haptics/index.mjs' %}";
 </script>
+<script src="{% static 'main/js/premium-cursor.js' %}"></script>
 <script src="{% static 'main/js/web-haptics-site.js' %}"></script>
