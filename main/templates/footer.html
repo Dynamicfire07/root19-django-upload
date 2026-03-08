@@ -1,8 +1,10 @@
 {% load static tz %}
 <link rel="stylesheet" href="{% static 'main/css/premium-ui.css' %}">
 <div class="premium-cursor" aria-hidden="true" data-testid="custom-cursor" hidden>
-  <div class="premium-cursor__ring" data-testid="custom-cursor-ring"></div>
-  <div class="premium-cursor__dot" data-testid="custom-cursor-dot"></div>
+  <div class="premium-cursor__halo" data-testid="custom-cursor-halo"></div>
+  <div class="premium-cursor__pointer" data-testid="custom-cursor-pointer">
+    <span class="premium-cursor__pointer-core"></span>
+  </div>
 </div>
 <footer class="mt-auto py-4 bg-light border-top">
   <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">

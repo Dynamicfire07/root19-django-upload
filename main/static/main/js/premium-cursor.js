@@ -42,6 +42,7 @@
   ].join(',');
 
   const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
   const desktopQuery = window.matchMedia('(min-width: 992px)');
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -51,13 +52,15 @@
 
   let pointerX = -100;
   let pointerY = -100;
-  let dotX = -100;
-  let dotY = -100;
-  let ringX = -100;
-  let ringY = -100;
+  let cursorX = -100;
+  let cursorY = -100;
+  let haloX = -100;
+  let haloY = -100;
 
   function shouldEnable() {
-    return finePointerQuery.matches && desktopQuery.matches && !reducedMotionQuery.matches;
+    const supportsDesktopPointer = finePointerQuery.matches || !coarsePointerQuery.matches;
+    const hasTouchPoints = (navigator.maxTouchPoints || 0) > 0;
+    return desktopQuery.matches && supportsDesktopPointer && !hasTouchPoints && !reducedMotionQuery.matches;
   }
 
   function setCursorMode(target) {
@@ -78,21 +81,23 @@
 
   function render() {
     rafId = 0;
+    const haloTargetX = pointerX + 10;
+    const haloTargetY = pointerY + 12;
 
-    dotX += (pointerX - dotX) * 0.34;
-    dotY += (pointerY - dotY) * 0.34;
-    ringX += (pointerX - ringX) * 0.18;
-    ringY += (pointerY - ringY) * 0.18;
+    cursorX += (pointerX - cursorX) * 0.42;
+    cursorY += (pointerY - cursorY) * 0.42;
+    haloX += (haloTargetX - haloX) * 0.16;
+    haloY += (haloTargetY - haloY) * 0.16;
 
-    cursor.style.setProperty('--cursor-dot-x', dotX.toFixed(2) + 'px');
-    cursor.style.setProperty('--cursor-dot-y', dotY.toFixed(2) + 'px');
-    cursor.style.setProperty('--cursor-ring-x', ringX.toFixed(2) + 'px');
-    cursor.style.setProperty('--cursor-ring-y', ringY.toFixed(2) + 'px');
+    cursor.style.setProperty('--cursor-pointer-x', cursorX.toFixed(2) + 'px');
+    cursor.style.setProperty('--cursor-pointer-y', cursorY.toFixed(2) + 'px');
+    cursor.style.setProperty('--cursor-halo-x', haloX.toFixed(2) + 'px');
+    cursor.style.setProperty('--cursor-halo-y', haloY.toFixed(2) + 'px');
 
-    const dotDelta = Math.abs(pointerX - dotX) + Math.abs(pointerY - dotY);
-    const ringDelta = Math.abs(pointerX - ringX) + Math.abs(pointerY - ringY);
+    const cursorDelta = Math.abs(pointerX - cursorX) + Math.abs(pointerY - cursorY);
+    const haloDelta = Math.abs(pointerX - haloX) + Math.abs(pointerY - haloY);
 
-    if (enabled && (visible || dotDelta > 0.08 || ringDelta > 0.08)) {
+    if (enabled && (visible || cursorDelta > 0.08 || haloDelta > 0.08)) {
       rafId = requestAnimationFrame(render);
     }
   }
@@ -191,7 +196,7 @@
   document.addEventListener('mouseleave', hideCursor, { passive: true });
   window.addEventListener('blur', hideCursor);
 
-  [finePointerQuery, desktopQuery, reducedMotionQuery].forEach(function (query) {
+  [finePointerQuery, coarsePointerQuery, desktopQuery, reducedMotionQuery].forEach(function (query) {
     if (typeof query.addEventListener === 'function') {
       query.addEventListener('change', evaluate);
     } else if (typeof query.addListener === 'function') {
