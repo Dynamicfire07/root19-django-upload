@@ -94,6 +94,7 @@
                     <div class="stage-center-info">
                         <span class="pager-badge" id="pager">Question 1 of {{ questions|length }}</span>
                         <span class="helper-note" id="stageHint">Select an answer to get instant feedback.</span>
+                        <div class="timer-badge fw-bold text-primary mt-1" style="font-size: 0.9rem;" id="questionTimer">00:00</div>
                     </div>
 
                     <button id="next-btn" class="nav-button nav-button-primary" type="button">
@@ -105,7 +106,10 @@
                 <div class="mobile-answer-dock" id="mobileAnswerDock">
                     <div class="mobile-answer-dock-top">
                         <div class="mobile-answer-context">
-                            <span class="mobile-answer-label" id="mobileDockQuestion">Question 1</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="mobile-answer-label" id="mobileDockQuestion">Question 1</span>
+                                <span class="fw-bold text-primary" style="font-size: 0.85rem;" id="mobileQuestionTimer">00:00</span>
+                            </div>
                             <span class="mobile-answer-feedback" id="mobileDockFeedback">Tap an option below to answer instantly.</span>
                         </div>
                         <button id="mobileNextBtn" class="mobile-next-btn" type="button">
@@ -278,6 +282,37 @@
             const loginPromptModal = loginPromptEl ? new bootstrap.Modal(loginPromptEl) : null;
             let currentIndex = 0;
             let mcqWebHaptics = null;
+
+            const questionTimer = document.getElementById('questionTimer');
+            const mobileQuestionTimer = document.getElementById('mobileQuestionTimer');
+            let questionStartTime = 0;
+            let questionTimerInterval = null;
+
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            }
+
+            function startTimer() {
+                stopTimer();
+                questionStartTime = Date.now();
+                const update = () => {
+                    const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+                    const formatted = formatTime(elapsed);
+                    if (questionTimer) questionTimer.textContent = formatted;
+                    if (mobileQuestionTimer) mobileQuestionTimer.textContent = formatted;
+                };
+                update();
+                questionTimerInterval = setInterval(update, 1000);
+            }
+
+            function stopTimer() {
+                if (questionTimerInterval) {
+                    clearInterval(questionTimerInterval);
+                    questionTimerInterval = null;
+                }
+            }
 
             async function initMcqWebHaptics() {
                 const libUrl = (window.R19_HAPTICS_LIB_URL || "").trim();
@@ -556,6 +591,13 @@
                 syncQuestionCard(currentQuestion);
                 updateSummaryMetrics();
                 updateProgressUI();
+
+                if (currentQuestion.dataset.answered === "true" || currentQuestion.dataset.status === "revealed") {
+                    stopTimer();
+                } else {
+                    startTimer();
+                }
+
                 if (record) recordStart(currentQuestion.dataset.questionId);
                 if (smooth) {
                     window.scrollTo({
@@ -569,6 +611,7 @@
                 if (!questionEl || questionEl.dataset.answered === "true") return;
 
                 triggerMcqHaptic("selection");
+                stopTimer();
 
                 const correctAnswer = questionEl.dataset.answer;
                 const isCorrect = selectedAnswer === correctAnswer;
