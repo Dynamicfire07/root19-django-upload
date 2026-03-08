@@ -77,6 +77,14 @@
             </section>
 
             {% if questions %}
+                <div class="stage-top-info">
+                    <div class="stage-top-meta">
+                        <span class="pager-badge" id="pager">Question 1 of {{ questions|length }}</span>
+                        <div class="timer-badge" id="questionTimer">00:00</div>
+                    </div>
+                    <span class="helper-note" id="stageHint">Select an answer to get instant feedback.</span>
+                </div>
+
                 <section class="question-viewport">
                     <div id="question-container">
                         {% for question in questions %}
@@ -90,12 +98,6 @@
                         <i class="bi bi-arrow-left"></i>
                         <span>Previous</span>
                     </button>
-
-                    <div class="stage-center-info">
-                        <span class="pager-badge" id="pager">Question 1 of {{ questions|length }}</span>
-                        <span class="helper-note" id="stageHint">Select an answer to get instant feedback.</span>
-                        <div class="timer-badge fw-bold text-primary mt-1" style="font-size: 0.9rem;" id="questionTimer">00:00</div>
-                    </div>
 
                     <button id="next-btn" class="nav-button nav-button-primary" type="button">
                         <span>Next question</span>
