@@ -83,6 +83,10 @@
   };
 
   const now = () => Date.now();
+  const hasUserActivation = () => {
+    if (typeof navigator === "undefined" || !navigator.userActivation) return true;
+    return navigator.userActivation.isActive || navigator.userActivation.hasBeenActive;
+  };
 
   const isDisabledElement = (el) => {
     if (!el) return true;
@@ -144,16 +148,30 @@
 
   const createFallbackHaptics = () => {
     const supportsVibrate = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+    const canUseVibrate = () => {
+      if (!supportsVibrate) return false;
+      if (!navigator.userActivation) return true;
+      return navigator.userActivation.isActive || navigator.userActivation.hasBeenActive;
+    };
     return {
       trigger(pattern) {
-        if (!supportsVibrate) return Promise.resolve();
+        if (!canUseVibrate()) return Promise.resolve();
         const sequence = convertPatternToVibrateArray(pattern);
         if (!sequence.length) return Promise.resolve();
-        navigator.vibrate(sequence);
+        try {
+          navigator.vibrate(sequence);
+        } catch (error) {
+          return Promise.resolve();
+        }
         return Promise.resolve();
       },
       cancel() {
-        if (supportsVibrate) navigator.vibrate(0);
+        if (!canUseVibrate()) return;
+        try {
+          navigator.vibrate(0);
+        } catch (error) {
+          // Ignore unsupported/blocked cancellation attempts.
+        }
       },
       destroy() {}
     };
@@ -161,6 +179,7 @@
 
   const trigger = (pattern, minGapMs = 50, options) => {
     if (!enabled || !haptics) return;
+    if (!hasUserActivation()) return;
     const elapsed = now() - lastTriggerAt;
     if (elapsed < minGapMs) return;
 
