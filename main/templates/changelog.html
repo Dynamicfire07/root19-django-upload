@@ -224,6 +224,52 @@
       font-weight: 600;
       border: 1px solid rgba(30, 58, 138, 0.08);
     }
+    .timeline-list {
+      display: grid;
+      gap: 1rem;
+    }
+    .timeline-item {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 1.25rem 1.35rem;
+      background: rgba(255,255,255,.8);
+      box-shadow: 0 16px 46px rgba(15, 23, 42, 0.05);
+    }
+    .timeline-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: .65rem;
+    }
+    .timeline-date {
+      color: var(--page-muted);
+      font-size: .9rem;
+      font-weight: 600;
+    }
+    .timeline-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: .38rem .7rem;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #b45309;
+      border: 1px solid rgba(245, 158, 11, 0.18);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .timeline-title {
+      margin-bottom: .45rem;
+      font-size: 1.08rem;
+      font-weight: 700;
+    }
+    .timeline-summary {
+      margin: 0;
+      color: var(--page-muted);
+      line-height: 1.7;
+    }
     .support-grid {
       display: grid;
       grid-template-columns: 1.1fr .9fr;
@@ -287,8 +333,8 @@
           <div class="hero-metric-value">UI + static stability</div>
         </div>
         <div class="hero-metric">
-          <div class="hero-metric-label">Latest ship date</div>
-          <div class="hero-metric-value">March 10</div>
+          <div class="hero-metric-label">Consumer logs</div>
+          <div class="hero-metric-value">{{ consumer_log_count }}</div>
         </div>
       </div>
     </section>
@@ -313,13 +359,29 @@
               <li>{{ item }}</li>
               {% endfor %}
             </ul>
-            <div class="commit-strip" aria-label="Related commits">
-              {% for commit in release.commits %}
-              <span class="commit-chip">{{ commit }}</span>
+            <div class="commit-strip" aria-label="Release highlights">
+              {% for item in release.highlights %}
+              <span class="commit-chip">{{ item }}</span>
               {% endfor %}
             </div>
           </article>
         </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="mb-4 mb-lg-5">
+      <span class="section-label">Earlier milestones</span>
+      <div class="timeline-list">
+        {% for item in milestones %}
+        <article class="timeline-item">
+          <div class="timeline-topline">
+            <div class="timeline-date">{{ item.date }}</div>
+            <div class="timeline-tag">{{ item.tag }}</div>
+          </div>
+          <h3 class="timeline-title">{{ item.title }}</h3>
+          <p class="timeline-summary">{{ item.summary }}</p>
+        </article>
         {% endfor %}
       </div>
     </section>
