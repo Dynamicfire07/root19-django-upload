@@ -284,7 +284,8 @@ class StaticPageTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Pre-v1 changelog", response.content)
         self.assertIn(b"Premium cursor and interface polish", response.content)
-        self.assertIn(b"Add collectstatic and sync branch", response.content)
+        self.assertIn(b"Question answering UI simplified", response.content)
+        self.assertNotIn(b"ee86d60", response.content)
 
 
 class QuestionFilterSubjectTests(SimpleTestCase):

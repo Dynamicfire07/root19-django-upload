@@ -1460,11 +1460,10 @@ def changelog(request):
                 "Fixed the favicon include so branded browser tabs resolve correctly from Django static paths.",
                 "Added collectstatic to the Docker build to keep production bundles synced before release.",
             ],
-            "commits": [
-                "ee86d60 · Add collectstatic and sync branch",
-                "5e5484f · Fix missing static assets and push",
-                "9cd9bb7 · Restore premium static assets",
-                "09c2aac · Fix favicon static path",
+            "highlights": [
+                "Production-ready static sync",
+                "Premium assets restored",
+                "Favicon path cleanup",
             ],
         },
         {
@@ -1478,13 +1477,96 @@ def changelog(request):
                 "Refined footer-level asset loading so the cursor and haptics initialize from the shared site shell.",
                 "Tuned the premium UI styling pass to support the new motion and pointer treatment across pages.",
             ],
-            "commits": [
-                "1dc28f2 · Fix premium cursor assets load",
-                "0d0ce56 · Add premium custom cursor",
+            "highlights": [
+                "Premium cursor rollout",
+                "Interaction polish pass",
+                "Shared shell asset loading",
             ],
         },
     ]
-    return render(request, "changelog.html", {"releases": releases})
+    milestones = [
+        {
+            "date": "March 8, 2026",
+            "title": "Timer surfaced higher on practice pages",
+            "summary": "Moved the timer into a more obvious position so timed sets feel clearer under pressure.",
+            "tag": "Practice flow",
+        },
+        {
+            "date": "March 8, 2026",
+            "title": "Timer behavior pass",
+            "summary": "Tightened the practice timer experience so pacing cues feel less awkward during question sessions.",
+            "tag": "Practice flow",
+        },
+        {
+            "date": "March 8, 2026",
+            "title": "First premium cursor experience landed",
+            "summary": "Shipped the earlier premium pointer pass that set up the later cursor and motion polish.",
+            "tag": "UI polish",
+        },
+        {
+            "date": "March 6, 2026",
+            "title": "Deploy requirements stabilized",
+            "summary": "Added the runtime dependency needed for production serving so deploys stop failing on missing app server tooling.",
+            "tag": "Infrastructure",
+        },
+        {
+            "date": "March 6, 2026",
+            "title": "Question answering UI simplified",
+            "summary": "Reduced visual clutter in the answer flow so the practice interface feels lighter and easier to parse.",
+            "tag": "Practice flow",
+        },
+        {
+            "date": "March 6, 2026",
+            "title": "Leaderboard visual upgrade",
+            "summary": "Refreshed leaderboard presentation and related practice surfaces to feel more premium and easier to scan.",
+            "tag": "Competitive",
+        },
+        {
+            "date": "March 6, 2026",
+            "title": "Premium QA styling pass",
+            "summary": "Improved the look and feel of question-and-answer screens ahead of the later simplification work.",
+            "tag": "UI polish",
+        },
+        {
+            "date": "March 4, 2026",
+            "title": "Question report workflow introduced",
+            "summary": "Added the reporting path that lets users flag question issues instead of silently working around them.",
+            "tag": "Quality",
+        },
+        {
+            "date": "March 4, 2026",
+            "title": "Site-wide haptics rollout",
+            "summary": "Expanded haptic feedback beyond one screen so interactions feel more tactile across the product.",
+            "tag": "Interaction",
+        },
+        {
+            "date": "March 3, 2026",
+            "title": "Hero and feedback system improved",
+            "summary": "Strengthened the home page atmosphere and tied it more closely to the new interaction feedback layer.",
+            "tag": "Homepage",
+        },
+        {
+            "date": "February 26, 2026",
+            "title": "Hero screen styling overhaul",
+            "summary": "Reworked the home page styling foundation to make the product feel more intentional and less generic.",
+            "tag": "Homepage",
+        },
+        {
+            "date": "February 26, 2026",
+            "title": "Hero screen appeal upgrade",
+            "summary": "Started the visual push on the landing experience with stronger layout, hierarchy, and visual energy.",
+            "tag": "Homepage",
+        },
+    ]
+    return render(
+        request,
+        "changelog.html",
+        {
+            "releases": releases,
+            "milestones": milestones,
+            "consumer_log_count": len(releases) + len(milestones),
+        },
+    )
 
 
 def duels_hub(request):
