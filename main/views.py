@@ -1446,6 +1446,47 @@ def about(request):
     return render(request, 'about.html')
 
 
+def changelog(request):
+    """Pre-v1 changelog page for recent product and deployment updates."""
+    releases = [
+        {
+            "version": "v0.9.2",
+            "date": "March 10, 2026",
+            "eyebrow": "Current pre-v1 build",
+            "title": "Static recovery and deploy hardening",
+            "summary": "Locked the premium UI assets back into the shipped build so the polished frontend survives production deploys.",
+            "changes": [
+                "Restored premium cursor, haptics, and supporting vendor bundles inside collected static assets.",
+                "Fixed the favicon include so branded browser tabs resolve correctly from Django static paths.",
+                "Added collectstatic to the Docker build to keep production bundles synced before release.",
+            ],
+            "commits": [
+                "ee86d60 · Add collectstatic and sync branch",
+                "5e5484f · Fix missing static assets and push",
+                "9cd9bb7 · Restore premium static assets",
+                "09c2aac · Fix favicon static path",
+            ],
+        },
+        {
+            "version": "v0.9.0",
+            "date": "March 8, 2026",
+            "eyebrow": "Feature drop",
+            "title": "Premium cursor and interface polish",
+            "summary": "Introduced the premium interaction layer that makes the site feel more deliberate without pretending this is v1 yet.",
+            "changes": [
+                "Added a custom premium cursor treatment with dedicated arrow assets for default and active states.",
+                "Refined footer-level asset loading so the cursor and haptics initialize from the shared site shell.",
+                "Tuned the premium UI styling pass to support the new motion and pointer treatment across pages.",
+            ],
+            "commits": [
+                "1dc28f2 · Fix premium cursor assets load",
+                "0d0ce56 · Add premium custom cursor",
+            ],
+        },
+    ]
+    return render(request, "changelog.html", {"releases": releases})
+
+
 def duels_hub(request):
     """Render the duel hub page with create/join forms."""
     ensure_duel_tables()

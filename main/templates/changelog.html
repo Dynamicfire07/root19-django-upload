@@ -1,0 +1,349 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog • ROOT 19</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  {% include '_analytics_head.html' %}
+  {% include '_favicon.html' %}
+  <style>
+    :root {
+      --page-bg: #f4f6fb;
+      --page-ink: #101828;
+      --page-muted: #667085;
+      --line: rgba(15, 23, 42, 0.08);
+      --card-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+      --hero-start: #0f172a;
+      --hero-end: #1d4ed8;
+      --accent: #f59e0b;
+      --accent-soft: rgba(245, 158, 11, 0.18);
+    }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(29, 78, 216, 0.16), transparent 32%),
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 28%),
+        var(--page-bg);
+      color: var(--page-ink);
+      font-family: "Plus Jakarta Sans", sans-serif;
+    }
+    h1, h2, h3, .display-font {
+      font-family: "Sora", sans-serif;
+      letter-spacing: -0.04em;
+    }
+    .hero-shell {
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      padding: 2.75rem;
+      background: linear-gradient(135deg, var(--hero-start), var(--hero-end));
+      color: #f8fafc;
+      box-shadow: var(--card-shadow);
+    }
+    .hero-shell::before,
+    .hero-shell::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(4px);
+      pointer-events: none;
+    }
+    .hero-shell::before {
+      width: 340px;
+      height: 340px;
+      top: -160px;
+      right: -120px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .hero-shell::after {
+      width: 240px;
+      height: 240px;
+      left: -90px;
+      bottom: -110px;
+      background: rgba(245, 158, 11, 0.16);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .55rem .95rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.16);
+      font-size: .82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+    .eyebrow-dot {
+      width: .65rem;
+      height: .65rem;
+      border-radius: 50%;
+      background: #f8fafc;
+      box-shadow: 0 0 0 6px rgba(255,255,255,.12);
+    }
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+    }
+    .hero-copy p {
+      max-width: 62ch;
+      color: rgba(248, 250, 252, 0.82);
+    }
+    .hero-metrics {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .hero-metric {
+      padding: 1rem 1.1rem;
+      border-radius: 22px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+    }
+    .hero-metric-label {
+      font-size: .76rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: rgba(248, 250, 252, 0.64);
+    }
+    .hero-metric-value {
+      margin-top: .4rem;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+    .section-label {
+      display: inline-block;
+      margin-bottom: .85rem;
+      padding: .4rem .85rem;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      color: #0f172a;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .release-card {
+      height: 100%;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(255,255,255,.82);
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(12px);
+    }
+    .release-card.current {
+      background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,248,235,.96));
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+    .release-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .version-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: .45rem .85rem;
+      border-radius: 999px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-weight: 700;
+      font-size: .88rem;
+      letter-spacing: .04em;
+    }
+    .release-date {
+      color: var(--page-muted);
+      font-size: .9rem;
+      font-weight: 600;
+      text-align: right;
+    }
+    .release-eyebrow {
+      margin-top: .8rem;
+      color: #b45309;
+      font-size: .76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+    }
+    .release-summary {
+      color: var(--page-muted);
+      line-height: 1.7;
+      margin-bottom: 1.2rem;
+    }
+    .change-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: .85rem;
+    }
+    .change-list li {
+      position: relative;
+      padding-left: 1.4rem;
+      color: #1f2937;
+      line-height: 1.65;
+    }
+    .change-list li::before {
+      content: "";
+      position: absolute;
+      top: .62rem;
+      left: 0;
+      width: .52rem;
+      height: .52rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      box-shadow: 0 0 0 6px var(--accent-soft);
+    }
+    .commit-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem;
+      margin-top: 1.4rem;
+    }
+    .commit-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: .55rem .8rem;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #1e3a8a;
+      font-size: .84rem;
+      font-weight: 600;
+      border: 1px solid rgba(30, 58, 138, 0.08);
+    }
+    .support-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 1.5rem;
+    }
+    .support-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 1.5rem;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+    }
+    .support-card p,
+    .support-card li {
+      color: var(--page-muted);
+      line-height: 1.7;
+    }
+    .support-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+    @media (max-width: 991.98px) {
+      .hero-shell {
+        padding: 2rem 1.35rem;
+        border-radius: 26px;
+      }
+      .hero-metrics,
+      .support-grid {
+        grid-template-columns: 1fr;
+      }
+      .release-header {
+        flex-direction: column;
+      }
+      .release-date {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <main class="container py-4 py-lg-5">
+    <section class="hero-shell mb-4 mb-lg-5">
+      <div class="hero-copy">
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          Pre-v1 changelog
+        </div>
+        <h1 class="display-font display-5 mt-4 mb-3">Recent ROOT 19 releases, without pretending we are at v1.</h1>
+        <p class="mb-0">
+          This page tracks the latest shipping work from the last few commits on main: interface polish, asset recovery, and deploy fixes that make the premium experience actually survive production.
+        </p>
+      </div>
+      <div class="hero-metrics">
+        <div class="hero-metric">
+          <div class="hero-metric-label">Release lane</div>
+          <div class="hero-metric-value">v0.9.x</div>
+        </div>
+        <div class="hero-metric">
+          <div class="hero-metric-label">Focus</div>
+          <div class="hero-metric-value">UI + static stability</div>
+        </div>
+        <div class="hero-metric">
+          <div class="hero-metric-label">Latest ship date</div>
+          <div class="hero-metric-value">March 10</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4 mb-lg-5">
+      <span class="section-label">Release notes</span>
+      <div class="row g-4">
+        {% for release in releases %}
+        <div class="col-12 col-xl-6">
+          <article class="release-card p-4 p-lg-5 {% if forloop.first %}current{% endif %}">
+            <div class="release-header">
+              <div>
+                <span class="version-pill">{{ release.version }}</span>
+                <div class="release-eyebrow">{{ release.eyebrow }}</div>
+              </div>
+              <div class="release-date">{{ release.date }}</div>
+            </div>
+            <h2 class="h3 mb-3">{{ release.title }}</h2>
+            <p class="release-summary">{{ release.summary }}</p>
+            <ul class="change-list">
+              {% for item in release.changes %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+            <div class="commit-strip" aria-label="Related commits">
+              {% for commit in release.commits %}
+              <span class="commit-chip">{{ commit }}</span>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="support-grid pb-3">
+      <article class="support-card">
+        <span class="section-label">What this means</span>
+        <h2 class="h4 mb-3">The last sprint was mostly about making the premium layer real.</h2>
+        <p class="mb-0">
+          The UI work is still intentionally pre-v1. The goal of these releases was not to explode scope, but to tighten the visible experience, fix the missing assets that broke it in deployment, and make the Docker build ship the same interface that worked locally.
+        </p>
+      </article>
+      <article class="support-card">
+        <span class="section-label">Pre-v1 posture</span>
+        <h2 class="h4 mb-3">What this changelog is optimizing for</h2>
+        <ul class="support-list mb-0">
+          <li>Small releases with explicit commit-backed notes.</li>
+          <li>Polish that improves daily use without overclaiming maturity.</li>
+          <li>Operational fixes that reduce “works locally, breaks in prod” drift.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+  {% include 'footer.html' %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

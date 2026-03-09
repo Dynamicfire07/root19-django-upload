@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
+from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory, SimpleTestCase
 
 from . import views
@@ -267,6 +268,23 @@ class APIKeyProtectionTests(SimpleTestCase):
         self.assertEqual(response.status_code, 401)
         body = json.loads(response.content.decode("utf-8"))
         self.assertIn("API key required", body.get("error", ""))
+
+
+class StaticPageTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_changelog_page_renders_recent_release_notes(self):
+        request = self.factory.get("/changelog/")
+        request.user = AnonymousUser()
+        request.session = {}
+
+        response = views.changelog(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Pre-v1 changelog", response.content)
+        self.assertIn(b"Premium cursor and interface polish", response.content)
+        self.assertIn(b"Add collectstatic and sync branch", response.content)
 
 
 class QuestionFilterSubjectTests(SimpleTestCase):
