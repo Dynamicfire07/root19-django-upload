@@ -1,0 +1,77 @@
+:root {
+  --premium-cursor-accent: #0d6efd;
+}
+
+/* 1. HIDE NATIVE CURSOR */
+body[data-premium-cursor="enabled"],
+body[data-premium-cursor="enabled"] * {
+  cursor: none !important;
+}
+
+/* 2. ALLOW TEXT CURSOR ON INPUTS */
+body[data-premium-cursor="enabled"] :where(input, textarea, [contenteditable="true"], .form-control) {
+  cursor: text !important;
+}
+
+/* 3. CUSTOM CURSOR CONTAINER */
+.premium-cursor {
+  --cursor-halo-x: -100px;
+  --cursor-halo-y: -100px;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2147483000;
+  transition: opacity 250ms ease;
+}
+
+.premium-cursor.is-visible {
+  opacity: 1;
+}
+
+/* 4. THE BLUE TRANSLUCENT CIRCLE */
+.premium-cursor__halo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 42px; 
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid rgba(13, 110, 253, 0.4);
+  background: rgba(13, 110, 253, 0.28); 
+  box-shadow: 0 5px 20px rgba(13, 110, 253, 0.2);
+  transform: translate3d(var(--cursor-halo-x), var(--cursor-halo-y), 0) translate(-50%, -50%);
+  transition: 
+    width 300ms cubic-bezier(0.19, 1, 0.22, 1), 
+    height 300ms cubic-bezier(0.19, 1, 0.22, 1),
+    border-radius 300ms cubic-bezier(0.19, 1, 0.22, 1),
+    background 300ms ease, 
+    border-width 300ms ease,
+    opacity 240ms ease;
+  opacity: 0.8;
+  backdrop-filter: blur(1.5px);
+}
+
+/* 5. HIDE THE SMALL DOT */
+.premium-cursor__pointer {
+  display: none !important;
+}
+
+/* 6. THE SHAPE-SHIFTING MORPH STATE */
+.premium-cursor.is-morphing .premium-cursor__halo {
+  background: transparent !important;
+  border: 3px solid #0d6efd !important; /* Medium thickness blue outline */
+  box-shadow: 0 0 15px rgba(13, 110, 253, 0.35);
+  opacity: 0.95;
+  backdrop-filter: none;
+}
+
+.premium-cursor.is-pressed .premium-cursor__halo {
+  transform: translate3d(var(--cursor-halo-x), var(--cursor-halo-y), 0) translate(-50%, -50%) scale(0.92);
+  opacity: 1;
+  border-width: 4px !important;
+}
+
+.premium-cursor.is-text .premium-cursor__halo {
+  opacity: 0;
+}

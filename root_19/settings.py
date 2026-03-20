@@ -183,11 +183,22 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Sessions: keep users signed in longer by default
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
 SESSION_SAVE_EVERY_REQUEST = True  # refresh expiry on activity
-if WHITENOISE_AVAILABLE:
-    # Use compressed storage without manifest requirement to avoid missing-file errors in dev.
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+if WHITENOISE_AVAILABLE and not DEBUG:
+    staticfiles_backend = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+elif WHITENOISE_AVAILABLE:
+    staticfiles_backend = 'whitenoise.storage.CompressedStaticFilesStorage'
 else:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    staticfiles_backend = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        # Production uses hashed filenames so CDN/browser caches pick up new builds.
+        "BACKEND": staticfiles_backend,
+    },
+}
 
 LOGGING = {
     "version": 1,
