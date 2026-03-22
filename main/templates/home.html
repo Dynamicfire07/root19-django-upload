@@ -34,17 +34,17 @@
             <div class="container position-relative">
                 <div class="row align-items-center justify-content-between gy-5">
                     <div class="col-lg-6 pe-xl-4">
-                        <div class="hero-copy-shell" data-hero-copy>
+                            <div class="hero-copy-shell" data-hero-copy>
                             <div class="hero-pill text-uppercase fw-semibold">
                                 <span class="hero-pill-dot"></span>
-                                Root 19 / Premium Exam Prep Workspace
+                                Root 19 / Daily Revision Workspace
                             </div>
                             <h1 class="display-4 fw-bold hero-title mt-3">
-                                <span class="hero-title-line">A premium workspace for</span>
-                                <span class="hero-title-line hero-title-accent">focused exam preparation.</span>
+                                <span class="hero-title-line">Root 19 keeps your</span>
+                                <span class="hero-title-line hero-title-accent">exam prep sharp, daily.</span>
                             </h1>
                             <p class="hero-lede mt-3 mb-4">
-                                Practice in timed sets, review with clarity, and track measurable progress in one clean workflow built for daily revision and final prep.
+                                Move from timed practice to review and progress tracking in one calm interface built for repeat sessions, not scattered revision.
                             </p>
 
                             <div class="d-flex flex-wrap gap-3 align-items-center hero-actions">
@@ -201,123 +201,91 @@
 
         <section class="surface-section pt-4" id="home-overview">
             <div class="container">
-                <div class="brand-strip">
-                    <div class="brand-strip-title">Designed for focused students and fast revision cycles</div>
-                    <div class="brand-strip-items">
+                <div class="brand-strip home-overview-strip">
+                    <div class="brand-strip-copy">
+                        <div class="brand-strip-title">Built for disciplined prep, not page hopping</div>
+                        <p class="brand-strip-text mb-0">One workspace for finding questions, drilling under time, reviewing mistakes, and keeping score on consistency.</p>
+                    </div>
+                    <div class="brand-strip-items" aria-label="Product surfaces">
                         <span>Question bank</span>
-                        <span>Practice engine</span>
-                        <span>Progress tracker</span>
-                        <span>Leaderboard</span>
+                        <span>Practice flow</span>
+                        <span>Progress view</span>
                         <span>Duels</span>
-                        <span>Chat support</span>
+                        <span>Leaderboard</span>
+                        <span>Support</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Stats + Features -->
         <section class="surface-section">
             <div class="container">
-                <div class="row g-4 align-items-center">
-                    <div class="col-lg-4">
-                        <div class="stat-card">
-                            <div class="stat-kicker">Database</div>
-                            <div class="stat-value" id="question-count-secondary">0</div>
-                            <div class="stat-label">Total questions live and growing</div>
+                <div class="support-grid">
+                    <div class="section-heading-wrap support-intro">
+                        <div class="section-kicker">Support</div>
+                        <h2 class="section-title">A single study loop that stays readable under pressure</h2>
+                        <p class="section-copy">The homepage now explains one thing clearly: find a set, run it, review it, and keep your momentum visible.</p>
+
+                        <div class="home-relevant-cards">
+                            <a href="{% url 'question_bank' %}" class="relevant-card text-decoration-none">
+                                <span class="relevant-card-kicker">Find the paper</span>
+                                <span class="relevant-card-title">Question Bank</span>
+                                <span class="relevant-card-copy">Build a revision set from sessions, tags, and subtopics without wasting setup time.</span>
+                            </a>
+                            <a href="{% url 'practice_questions' %}" class="relevant-card text-decoration-none">
+                                <span class="relevant-card-kicker">Run the block</span>
+                                <span class="relevant-card-title">Practice</span>
+                                <span class="relevant-card-copy">Move through timed attempts and review without losing context between questions.</span>
+                            </a>
+                            <a href="{% url 'progress_tracker' %}" class="relevant-card text-decoration-none">
+                                <span class="relevant-card-kicker">See what changed</span>
+                                <span class="relevant-card-title">Progress</span>
+                                <span class="relevant-card-copy">Check readiness, streaks, and weak areas before planning the next session.</span>
+                            </a>
                         </div>
                     </div>
 
-                    <div class="col-lg-8">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="feature-card">
-                                    <div class="feature-icon">
-                                        <span class="icon-circle"></span>
-                                    </div>
-                                    <div class="feature-title">Adaptive sets</div>
-                                    <div class="feature-copy">
-                                        Mix timed drills and walkthroughs tailored to your pace.
-                                    </div>
-                                </div>
+                    <div class="support-stage">
+                        <div class="support-stage-top">
+                            <div>
+                                <div class="support-stage-label">Question bank live</div>
+                                <div class="support-stage-value" id="question-count-secondary">0</div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="feature-card">
-                                    <div class="feature-icon">
-                                        <span class="icon-tri"></span>
-                                    </div>
-                                    <div class="feature-title">Clean focus</div>
-                                    <div class="feature-copy">
-                                        A distraction-free workspace with quick filters and search.
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="feature-card">
-                                    <div class="feature-icon">
-                                        <span class="icon-wave"></span>
-                                    </div>
-                                    <div class="feature-title">Progress clarity</div>
-                                    <div class="feature-copy">
-                                        Track streaks, accuracy, and readiness at a glance.
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="support-stage-meta">curated questions ready for timed sets and revision rounds</div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="row g-4 align-items-center mt-4">
-                    <div class="col-lg-5">
-                        <div class="stat-card cta-card text-white">
-                            <div class="stat-kicker text-uppercase text-white-50">
-                                Get more when logged in
+                        <div class="support-stage-run">
+                            <div class="support-runway">
+                                <span class="support-runway-stop active">Pick a paper</span>
+                                <span class="support-runway-stop">Run the set</span>
+                                <span class="support-runway-stop">Review misses</span>
+                                <span class="support-runway-stop">Track readiness</span>
                             </div>
-                            <div class="stat-value text-white">Keep your streak alive.</div>
-                            <p class="mb-4 text-white-75">
-                                Log in to sync attempts, track accuracy over time, and unlock guided sets tailored to you.
-                            </p>
-                            <div class="d-flex gap-3">
-                                <a class="btn btn-light btn-lg shadow-sm" href="{% url 'login' %}">Log in</a>
-                                <a class="btn btn-outline-light btn-lg" href="{% url 'register' %}">Create account</a>
-                            </div>
+                            <div class="support-stage-note">Built to reduce navigation friction before exams, not add another dashboard to manage.</div>
                         </div>
-                    </div>
 
-                    <div class="col-lg-7">
-                        <div class="feature-spotlight">
-                            <div class="spotlight-tabs">
-                                <button class="spotlight-tab active" data-target="timed">Timed mode</button>
-                                <button class="spotlight-tab" data-target="review">Review mode</button>
-                                <button class="spotlight-tab" data-target="filters">Filters</button>
-                                <button class="spotlight-tab" data-target="analytics">Analytics</button>
-                            </div>
-
-                            <div class="spotlight-panels">
-                                <div class="spotlight-panel active" data-panel="timed">
-                                    <div class="spotlight-title">Timed sessions that feel smooth</div>
-                                    <p class="spotlight-copy">
-                                        Start a sprint with pacing hints, pause with grace, and jump back in exactly where you left off.
-                                    </p>
+                        <div class="support-points">
+                            <article class="support-point">
+                                <span class="support-point-index">01</span>
+                                <div>
+                                    <h3>Timed when you need pace</h3>
+                                    <p>Start fast drills without losing the review context that matters after the clock stops.</p>
                                 </div>
-                                <div class="spotlight-panel" data-panel="review">
-                                    <div class="spotlight-title">See the “why” behind every answer</div>
-                                    <p class="spotlight-copy">
-                                        Detailed explanations, worked steps, and peer notes to lock in concepts quickly.
-                                    </p>
+                            </article>
+                            <article class="support-point">
+                                <span class="support-point-index">02</span>
+                                <div>
+                                    <h3>Review without clutter</h3>
+                                    <p>Explanations, saved questions, and topic filters stay close to the practice flow instead of hiding behind separate tools.</p>
                                 </div>
-                                <div class="spotlight-panel" data-panel="filters">
-                                    <div class="spotlight-title">Search that finds what matters</div>
-                                    <p class="spotlight-copy">
-                                        Use tags, difficulty, and recency filters to build the exact set you need in seconds.
-                                    </p>
+                            </article>
+                            <article class="support-point">
+                                <span class="support-point-index">03</span>
+                                <div>
+                                    <h3>Progress that actually guides revision</h3>
+                                    <p>Readiness, streaks, and performance summaries make the next study decision obvious.</p>
                                 </div>
-                                <div class="spotlight-panel" data-panel="analytics">
-                                    <div class="spotlight-title">Clarity on progress</div>
-                                    <p class="spotlight-copy">
-                                        Heatmaps, streaks, and readiness signals guide what to study next.
-                                    </p>
-                                </div>
-                            </div>
+                            </article>
                         </div>
                     </div>
                 </div>
@@ -326,35 +294,51 @@
 
         <section class="surface-section section-tint">
             <div class="container">
-                <div class="section-heading-wrap mb-4">
-                    <div class="section-kicker">Workflow</div>
-                    <h2 class="section-title">A clear prep cycle you can repeat daily</h2>
-                    <p class="section-copy">From topic selection to review, every step is connected so you spend less time navigating and more time improving.</p>
-                </div>
-                <div class="row g-3 g-lg-4">
-                    <div class="col-md-4">
-                        <div class="journey-card">
-                            <div class="journey-step">01</div>
-                            <h3>Pick a topic</h3>
-                            <p>Start in the question bank with tags, sessions, and subtopics that match your target paper.</p>
-                            <a href="{% url 'question_bank' %}" class="journey-link">Open question bank</a>
-                        </div>
+                <div class="workflow-shell">
+                    <div class="section-heading-wrap workflow-intro">
+                        <div class="section-kicker">Workflow</div>
+                        <h2 class="section-title">A repeatable revision rhythm for ordinary weekdays and final-week pressure</h2>
+                        <p class="section-copy">Each stage has one job, one action, and one reason to come back tomorrow.</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="journey-card">
-                            <div class="journey-step">02</div>
-                            <h3>Practice with intent</h3>
-                            <p>Switch between timed mode and review mode while saving key questions for your revision queue.</p>
-                            <a href="{% url 'practice_questions' %}" class="journey-link">Start practice</a>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="journey-card">
-                            <div class="journey-step">03</div>
-                            <h3>Review your performance</h3>
-                            <p>Use progress and leaderboard insights to focus on weak areas and maintain consistency.</p>
-                            <a href="{% url 'progress_tracker' %}" class="journey-link">View progress</a>
-                        </div>
+
+                    <div class="workflow-steps">
+                        <article class="workflow-step">
+                            <div class="workflow-step-meta">
+                                <span class="workflow-step-no">01</span>
+                                <span class="workflow-step-line"></span>
+                            </div>
+                            <div class="workflow-step-body">
+                                <div class="workflow-step-kicker">Start with scope</div>
+                                <h3>Open the question bank and narrow the paper fast</h3>
+                                <p>Use sessions, tags, and subtopics to pull together the exact area you want to revise before momentum drops.</p>
+                                <a href="{% url 'question_bank' %}" class="workflow-link">Open question bank</a>
+                            </div>
+                        </article>
+
+                        <article class="workflow-step">
+                            <div class="workflow-step-meta">
+                                <span class="workflow-step-no">02</span>
+                                <span class="workflow-step-line"></span>
+                            </div>
+                            <div class="workflow-step-body">
+                                <div class="workflow-step-kicker">Run the session</div>
+                                <h3>Practice in timed sets without losing your place</h3>
+                                <p>Switch between pressure mode and review mode while preserving the context you need for deliberate correction.</p>
+                                <a href="{% url 'practice_questions' %}" class="workflow-link">Start practice</a>
+                            </div>
+                        </article>
+
+                        <article class="workflow-step">
+                            <div class="workflow-step-meta">
+                                <span class="workflow-step-no">03</span>
+                            </div>
+                            <div class="workflow-step-body">
+                                <div class="workflow-step-kicker">Close the loop</div>
+                                <h3>Review performance and decide the next revision block</h3>
+                                <p>Progress, saved questions, duels, and leaderboard context turn raw attempts into a visible plan for the next session.</p>
+                                <a href="{% url 'progress_tracker' %}" class="workflow-link">View progress</a>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </div>
@@ -362,70 +346,58 @@
 
         <section class="surface-section">
             <div class="container">
-                <div class="section-heading-wrap mb-4">
-                    <div class="section-kicker">Platform sections</div>
-                    <h2 class="section-title">Everything your current site already supports, surfaced clearly</h2>
-                </div>
-                <div class="row g-3 g-lg-4">
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'question_bank' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Question Bank</span>
-                            <span class="module-copy">Browse by subject, session, and subtopic.</span>
-                        </a>
+                <div class="home-index-shell">
+                    <div class="section-heading-wrap home-index-intro">
+                        <div class="section-kicker">Platform index</div>
+                        <h2 class="section-title">Every major surface, arranged like destinations instead of a card wall</h2>
+                        <p class="section-copy">Scan the headings, pick your route, and move straight into the part of the product you need.</p>
                     </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'practice_questions' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Practice</span>
-                            <span class="module-copy">Attempt questions with immediate feedback.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'progress_tracker' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Progress</span>
-                            <span class="module-copy">Track completion, streak, and topic growth.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'saved_questions' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Saved Questions</span>
-                            <span class="module-copy">Build a revision shortlist for quick review.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'leaderboard' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Leaderboard</span>
-                            <span class="module-copy">See top performers and benchmark pace.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'duels_hub' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Duels</span>
-                            <span class="module-copy">Compete in live challenge rounds.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'chat_room' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Chat</span>
-                            <span class="module-copy">Collaborate, ask, and share questions.</span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-lg-3">
-                        <a href="{% url 'report_bug' %}" class="module-card text-decoration-none">
-                            <span class="module-title">Support</span>
-                            <span class="module-copy">Report issues and keep the platform sharp.</span>
-                        </a>
-                    </div>
-                </div>
 
-                <div class="home-final-cta mt-4 mt-lg-5">
-                    <div>
-                        <div class="section-kicker text-white-50">Ready to start?</div>
-                        <h3 class="mb-2">Turn daily practice into measurable progress.</h3>
-                        <p class="mb-0 text-white-75">Create an account and keep your full prep history in one place.</p>
+                    <div class="module-rail">
+                        <a href="{% url 'question_bank' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Question Bank</span>
+                            <span class="module-rail-copy">Browse by paper, subject, session, and subtopic.</span>
+                        </a>
+                        <a href="{% url 'practice_questions' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Practice</span>
+                            <span class="module-rail-copy">Attempt sets with immediate feedback and review flow.</span>
+                        </a>
+                        <a href="{% url 'progress_tracker' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Progress</span>
+                            <span class="module-rail-copy">Check readiness, streak, and topic movement.</span>
+                        </a>
+                        <a href="{% url 'saved_questions' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Saved Questions</span>
+                            <span class="module-rail-copy">Keep a revision shortlist ready for the next pass.</span>
+                        </a>
+                        <a href="{% url 'leaderboard' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Leaderboard</span>
+                            <span class="module-rail-copy">Benchmark pace and compare with other students.</span>
+                        </a>
+                        <a href="{% url 'duels_hub' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Duels</span>
+                            <span class="module-rail-copy">Step into competitive rounds when you want urgency.</span>
+                        </a>
+                        <a href="{% url 'chat_room' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Chat</span>
+                            <span class="module-rail-copy">Ask, discuss, and keep collaboration close to practice.</span>
+                        </a>
+                        <a href="{% url 'report_bug' %}" class="module-rail-item text-decoration-none">
+                            <span class="module-rail-name">Support</span>
+                            <span class="module-rail-copy">Report issues and keep the workspace reliable.</span>
+                        </a>
                     </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a class="btn btn-light btn-lg" href="{% url 'register' %}">Create account</a>
-                        <a class="btn btn-outline-light btn-lg" href="{% url 'login' %}">Log in</a>
+
+                    <div class="home-final-cta mt-4 mt-lg-5">
+                        <div>
+                            <div class="section-kicker text-white-50">Ready to start?</div>
+                            <h3 class="mb-2">Keep every revision block in one place.</h3>
+                            <p class="mb-0 text-white-75">Create an account to save attempts, track your pace, and return to the exact questions that still need work.</p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-light btn-lg" href="{% url 'register' %}">Create account</a>
+                            <a class="btn btn-outline-light btn-lg" href="{% url 'login' %}">Log in</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -487,19 +459,6 @@
             });
         }
 
-        const tabs = document.querySelectorAll('.spotlight-tab');
-        const panels = document.querySelectorAll('.spotlight-panel');
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const target = tab.getAttribute('data-target');
-                tabs.forEach(t => t.classList.toggle('active', t === tab));
-                panels.forEach(panel =>
-                    panel.classList.toggle('active', panel.getAttribute('data-panel') === target)
-                );
-            });
-        });
-
         const revealTargets = new Set();
         const revealSelectors = [
             '.hero-copy-shell',
@@ -508,11 +467,11 @@
             '.hero-metric',
             '.brand-strip',
             '.section-heading-wrap',
-            '.stat-card',
-            '.feature-card',
-            '.feature-spotlight',
-            '.journey-card',
-            '.module-card',
+            '.relevant-card',
+            '.support-stage',
+            '.support-point',
+            '.workflow-step',
+            '.module-rail-item',
             '.home-final-cta'
         ];
 
@@ -534,7 +493,7 @@
             }
 
             if (
-                el.matches('.hero-metric, .badge-ghost, .hero-feature, .feature-card, .journey-card, .module-card')
+                el.matches('.hero-metric, .relevant-card, .support-point, .workflow-step, .module-rail-item')
             ) {
                 el.style.setProperty('--reveal-delay', `${(staggerIndex % 7) * 55}ms`);
                 staggerIndex += 1;
@@ -571,11 +530,10 @@
         const depthTargets = Array.from(document.querySelectorAll([
             '.brand-strip',
             '.section-heading-wrap',
-            '.stat-card',
-            '.feature-card',
-            '.feature-spotlight',
-            '.journey-card',
-            '.module-card',
+            '.relevant-card',
+            '.support-stage',
+            '.workflow-step',
+            '.module-rail-item',
             '.home-final-cta'
         ].join(',')));
 
@@ -630,7 +588,7 @@
                     const magnitude = Math.min(Math.abs(clampedDistance), 1);
                     const baseStrength =
                         el.classList.contains('home-final-cta') ? 18 :
-                        el.classList.contains('feature-spotlight') ? 14 :
+                        el.classList.contains('support-stage') ? 14 :
                         el.classList.contains('section-heading-wrap') ? 10 :
                         el.classList.contains('brand-strip') ? 8 :
                         12;

@@ -41,15 +41,14 @@ body[data-premium-cursor="enabled"] :where(input, textarea, [contenteditable="tr
   background: rgba(13, 110, 253, 0.28); 
   box-shadow: 0 5px 20px rgba(13, 110, 253, 0.2);
   transform: translate3d(var(--cursor-halo-x), var(--cursor-halo-y), 0) translate(-50%, -50%);
-  transition: 
-    width 300ms cubic-bezier(0.19, 1, 0.22, 1), 
-    height 300ms cubic-bezier(0.19, 1, 0.22, 1),
-    border-radius 300ms cubic-bezier(0.19, 1, 0.22, 1),
-    background 300ms ease, 
-    border-width 300ms ease,
-    opacity 240ms ease;
-  opacity: 0.8;
-  backdrop-filter: blur(1.5px);
+  transition:
+    background 220ms ease,
+    border-width 220ms ease,
+    opacity 220ms ease,
+    box-shadow 280ms ease,
+    backdrop-filter 220ms ease;
+  opacity: 0.82;
+  backdrop-filter: blur(2.5px) saturate(120%);
 }
 
 /* 5. HIDE THE SMALL DOT */
@@ -59,17 +58,18 @@ body[data-premium-cursor="enabled"] :where(input, textarea, [contenteditable="tr
 
 /* 6. THE SHAPE-SHIFTING MORPH STATE */
 .premium-cursor.is-morphing .premium-cursor__halo {
-  background: transparent !important;
-  border: 3px solid #0d6efd !important; /* Medium thickness blue outline */
-  box-shadow: 0 0 15px rgba(13, 110, 253, 0.35);
-  opacity: 0.95;
-  backdrop-filter: none;
+  background: rgba(13, 110, 253, 0.08) !important;
+  border: 2px solid rgba(13, 110, 253, 0.78) !important;
+  box-shadow: 0 10px 30px rgba(13, 110, 253, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  opacity: 0.98;
+  backdrop-filter: blur(4px) saturate(130%);
 }
 
 .premium-cursor.is-pressed .premium-cursor__halo {
   transform: translate3d(var(--cursor-halo-x), var(--cursor-halo-y), 0) translate(-50%, -50%) scale(0.92);
   opacity: 1;
-  border-width: 4px !important;
+  border-width: 3px !important;
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.24);
 }
 
 .premium-cursor.is-text .premium-cursor__halo {
