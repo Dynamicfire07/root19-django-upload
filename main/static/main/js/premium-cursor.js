@@ -33,9 +33,39 @@
   let targetHeight = 42;
   let currentRadius = 999;
   let targetRadius = 999;
+  let premiumCursorEnabled = false;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const lerp = (start, end, amount) => start + (end - start) * amount;
+
+  function canUsePremiumCursor() {
+    if (window.innerWidth <= 991) {
+      return false;
+    }
+
+    if (!window.matchMedia) {
+      return true;
+    }
+
+    return window.matchMedia('(any-hover: hover) and (any-pointer: fine)').matches;
+  }
+
+  function enablePremiumCursor() {
+    if (premiumCursorEnabled) return;
+    premiumCursorEnabled = true;
+    body.dataset.premiumCursor = 'enabled';
+    cursor.hidden = false;
+  }
+
+  function disablePremiumCursor() {
+    premiumCursorEnabled = false;
+    delete body.dataset.premiumCursor;
+    currentTarget = null;
+    isMorphing = false;
+    cursor.hidden = true;
+    cursor.classList.remove('is-interactive', 'is-morphing', 'is-pressed', 'is-text');
+    hideCursor();
+  }
 
   function parseRadius(rawValue) {
     const parsed = Number.parseFloat(rawValue);
@@ -100,10 +130,15 @@
       targetY = pointerY;
     }
 
+    cursor.classList.toggle('is-interactive', Boolean(interactiveTarget && !textTarget));
     cursor.classList.toggle('is-text', Boolean(textTarget));
   }
 
   function showCursor() {
+    if (!canUsePremiumCursor()) return;
+
+    enablePremiumCursor();
+
     if (!visible) {
       visible = true;
       cursor.classList.add('is-visible');
@@ -116,7 +151,10 @@
   }
 
   window.addEventListener('mousemove', function (event) {
-    if (window.innerWidth <= 991) return;
+    if (!canUsePremiumCursor()) {
+      disablePremiumCursor();
+      return;
+    }
     
     pointerX = event.clientX;
     pointerY = event.clientY;
@@ -137,10 +175,13 @@
   }, { passive: true });
 
   window.addEventListener('resize', () => {
-    if (window.innerWidth <= 991) {
-      hideCursor();
+    if (!canUsePremiumCursor()) {
+      disablePremiumCursor();
       return;
     }
+
+    enablePremiumCursor();
+
     if (currentTarget) {
       setCursorMode(currentTarget);
     }
@@ -151,8 +192,6 @@
   document.addEventListener('mouseleave', hideCursor);
   
   // Initialization
-  body.dataset.premiumCursor = 'enabled';
-  cursor.hidden = false;
+  cursor.hidden = true;
   syncHalo();
-  ensureLoop();
 })();

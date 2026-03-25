@@ -32,13 +32,16 @@ test.describe('premium cursor and polish', () => {
   test('home page renders, enables the premium cursor on desktop, and saves screenshots', async ({ page }) => {
     ensureScreenshotDir();
     const errors = bindPageErrorCollection(page);
+    const primaryCta = page.getByRole('link', { name: /explore question bank/i });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('navigation')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /focused exam preparation/i })).toBeVisible();
-    await expect(page.getByTestId('home-primary-cta')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /exam prep sharp, daily/i })).toBeVisible();
+    await expect(primaryCta).toBeVisible();
     await page.waitForTimeout(500);
     await assertNoConsoleErrors(errors);
+
+    await expect(page.locator('body')).not.toHaveAttribute('data-premium-cursor', 'enabled');
 
     await page.screenshot({
       path: path.join(screenshotDir, 'home-default.png'),
@@ -57,7 +60,7 @@ test.describe('premium cursor and polish', () => {
       fullPage: true,
     });
 
-    await page.getByTestId('home-primary-cta').hover();
+    await primaryCta.hover();
     await page.waitForTimeout(200);
     await expect(cursor).toHaveClass(/is-interactive/);
 
@@ -77,6 +80,8 @@ test.describe('premium cursor and polish', () => {
     await expect(page.getByTestId('question-bank-start')).toBeVisible();
     await page.waitForTimeout(500);
     await assertNoConsoleErrors(errors);
+
+    await expect(page.locator('body')).not.toHaveAttribute('data-premium-cursor', 'enabled');
 
     await page.mouse.move(360, 220);
     await page.waitForTimeout(200);
