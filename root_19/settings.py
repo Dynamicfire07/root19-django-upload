@@ -2,6 +2,9 @@
 
 from pathlib import Path
 import os
+import mimetypes
+
+mimetypes.add_type("text/javascript", ".mjs", strict=True)
 
 try:
     import whitenoise  # noqa: F401

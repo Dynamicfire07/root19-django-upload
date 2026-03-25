@@ -42,6 +42,9 @@ test.describe('premium cursor and polish', () => {
     await assertNoConsoleErrors(errors);
 
     await expect(page.locator('body')).not.toHaveAttribute('data-premium-cursor', 'enabled');
+    await page.setViewportSize({ width: 1438, height: 958 });
+    await page.waitForTimeout(150);
+    await expect(page.locator('body')).not.toHaveAttribute('data-premium-cursor', 'enabled');
 
     await page.screenshot({
       path: path.join(screenshotDir, 'home-default.png'),

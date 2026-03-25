@@ -180,8 +180,6 @@
       return;
     }
 
-    enablePremiumCursor();
-
     if (currentTarget) {
       setCursorMode(currentTarget);
     }
