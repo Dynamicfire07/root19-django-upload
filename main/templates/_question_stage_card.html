@@ -15,7 +15,7 @@
       <div class="question-panel-top">
         <div>
           <div class="question-step-badge">Question {{ forloop.counter }}</div>
-          <h2 class="question-heading">Focus on the prompt</h2>
+          <h2 class="question-heading">Practice makes a person perfect</h2>
           <p class="question-copy">
             {% if question.subtopic %}
               {{ question.subtopic }}
@@ -38,7 +38,21 @@
 
       <div class="question-media-frame">
         {% if question.image_src %}
-          <img src="{{ question.image_src }}" alt="Question Image">
+          {% if paper == "4" or ".pdf" in question.image_src|lower %}
+            <div class="pdf-container">
+              <iframe 
+                src="{{ question.image_src }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH&zoom=page-width"
+                style="width: 100%; height: 100%; min-height: 420px; border: none; display: block; background: #fff;"
+                allow="fullscreen"
+              ></iframe>
+            </div>
+            <div class="pdf-scroll-hint">
+              <i class="bi bi-mouse2"></i>
+              Scroll within the viewer to see the full question
+            </div>
+          {% else %}
+            <img src="{{ question.image_src }}" alt="Question Image">
+          {% endif %}
         {% else %}
           <div class="question-empty-state">
             <i class="bi bi-image"></i>
@@ -49,6 +63,7 @@
     </section>
 
     <aside class="question-response-panel">
+      {% if paper != "4" %}
       <div class="response-header">
         <div>
           <div class="block-kicker">{% if mode == "saved" %}Saved Queue{% else %}Your Answer{% endif %}</div>
@@ -57,7 +72,9 @@
         </div>
         <span class="question-status-pill" data-role="status-pill" data-status="idle">Awaiting answer</span>
       </div>
+      {% endif %}
 
+      {% if paper != "4" %}
       <div class="answer-block">
         <div class="answer-primary-note">
           <i class="bi bi-hand-index-thumb"></i>
@@ -92,6 +109,12 @@
           <div class="feedback-detail" data-role="feedback-detail">Your result stays visible while you move through the set.</div>
         </div>
       </div>
+      {% else %}
+      <div class="paper-4-notice mb-4" style="background: var(--bg-soft, #f8fafc); padding: 1.25rem; border-radius: 12px; border-left: 4px solid var(--primary, #0b5ed7);">
+        <h4 class="h6 fw-bold mb-1">Standard Set Control</h4>
+        <p class="small text-muted mb-0">Record progress, star for review, or bookmark this question for later practice sets.</p>
+      </div>
+      {% endif %}
 
       <div class="utility-block">
         <div class="block-kicker">Tools</div>

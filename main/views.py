@@ -18,6 +18,7 @@ import secrets
 import string
 import json
 import typing as _t
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 SESSION_LABELS = {
     "620": "Chemistry",
@@ -75,6 +76,7 @@ from .question_images import (
     build_question_image_src,
     apply_question_image_src_to_rows,
 )
+from .supabase_storage import create_signed_url
 from .streaks import compute_streak, invalidate_streak_cache
 from .models import BugReport, APIKey, QuestionBankNotice
 
@@ -87,7 +89,8 @@ SESSION_OPTIONS_TTL = 600  # 10 minutes
 SUBTOPIC_CACHE_TTL = 600
 API_OPTIONS_CACHE_KEY = "api_options_reference"
 API_OPTIONS_TTL = 600
-PRACTICE_QUESTION_LIMIT = 40  # cap to avoid loading all questions at once
+PRACTICE_QUESTION_LIMIT = 40      # default cap for Paper 2
+PRACTICE_QUESTION_LIMIT_P4 = 15  # smaller cap for Paper 4 (full PDFs are heavier)
 DEFAULT_CHAMPION_THEME = "gold"
 ALLOWED_CHAMPION_THEMES = ("gold", "emerald", "sapphire")
 
@@ -1023,21 +1026,33 @@ def api_options_reference(request):
 
 
 def get_subtopics(request):
-    """Return subtopics for a given session code."""
+    """Return subtopics for a given session code and paper type."""
     session_code = request.GET.get('session_code')
+    paper = request.GET.get('paper', '2')
     if not session_code:
         return JsonResponse({'error': 'Session code is required'}, status=400)
 
-    cache_key = f"subtopics:{session_code}"
+    # Resolve table name based on paper
+    table_name = 'questions_v2' if str(paper) == '4' else 'questions'
+    
+    # Restrict paper 4 to session 625
+    if str(paper) == '4' and session_code != '625':
+        return JsonResponse({'subtopics': []})
+
+    cache_key = f"subtopics:{session_code}:{paper}:{table_name}"
     subtopics = cache.get(cache_key)
     if subtopics is None:
-        rows = query_all(
-            "SELECT DISTINCT subtopic FROM questions WHERE session_code = %s",
-            (session_code,),
-        )
-        subtopics = [r['subtopic'] for r in rows]
-        cache.set(cache_key, subtopics, SUBTOPIC_CACHE_TTL)
-    # Return an empty list instead of an error to allow "all subtopics" flows
+        try:
+            rows = query_all(
+                f"SELECT DISTINCT subtopic FROM {table_name} WHERE session_code = %s",
+                (session_code,),
+            )
+            subtopics = [r['subtopic'] for r in rows if r.get('subtopic')]
+            cache.set(cache_key, subtopics, SUBTOPIC_CACHE_TTL)
+        except Exception as e:
+            print(f"Error fetching subtopics: {e}")
+            subtopics = []
+    
     return JsonResponse({'subtopics': list(subtopics or [])})
 
 def practice_questions(request):
@@ -1045,35 +1060,76 @@ def practice_questions(request):
     ensure_question_image_columns()
     session_code = (request.GET.get('session_code') or "").strip()
     subtopic = (request.GET.get('subtopic') or "").strip()
+    paper = (request.GET.get('paper') or "2").strip()
+    
     limit_override = request.GET.get('limit')
+    default_limit = PRACTICE_QUESTION_LIMIT_P4 if paper == '4' else PRACTICE_QUESTION_LIMIT
     try:
-        limit = max(1, min(int(limit_override), 200)) if limit_override else PRACTICE_QUESTION_LIMIT
+        limit = max(1, min(int(limit_override), 200)) if limit_override else default_limit
     except (TypeError, ValueError):
-        limit = PRACTICE_QUESTION_LIMIT
+        limit = default_limit
 
-    # Build filtered query; select only needed columns and randomize in SQL
+    # Determine table and conditions
+    table_name = 'questions_v2' if paper == '4' else 'questions'
     conditions = []
     params = []
-    if session_code:
+
+    if paper == '4':
+        # For paper 4, force session 625
+        conditions.append("session_code = '625'")
+    elif session_code:
         conditions.append("session_code = %s")
         params.append(session_code)
+
     if subtopic:
         conditions.append("subtopic = %s")
         params.append(subtopic)
+        
     where_sql = " AND ".join(conditions) if conditions else "TRUE"
 
-    docs = query_all(
-        f"""
-        SELECT question_id, image_base64, image_url, answer, session_code, subtopic
-        FROM questions
-        WHERE {where_sql}
-        ORDER BY RANDOM()
-        LIMIT %s
-        """,
-        tuple(params + [limit]),
-    )
-    user_id = request.session.get('user_id') or ""
+    # Paper 4 might have different column names (pdf_url vs image_url)
+    if paper == '4':
+        # questions_v2: question_id, session_code, subtopic, pdf_url
+        docs = query_all(
+            f"""
+            SELECT question_id, pdf_url as image_url, NULL as image_base64, NULL as answer, session_code, subtopic
+            FROM {table_name}
+            WHERE {where_sql}
+            ORDER BY RANDOM()
+            LIMIT %s
+            """,
+            tuple(params + [limit]),
+        )
+    else:
+        docs = query_all(
+            f"""
+            SELECT question_id, image_base64, image_url, answer, session_code, subtopic
+            FROM {table_name}
+            WHERE {where_sql}
+            ORDER BY RANDOM()
+            LIMIT %s
+            """,
+            tuple(params + [limit]),
+        )
+    user_id = request.session.get("user_id") or ""
+
+    # For Paper 4: generate all signed URLs in parallel to avoid sequential latency
+    if paper == "4" and docs:
+        def _sign_doc(doc):
+            raw_url = (doc.get("image_url") or "").strip()
+            if raw_url and "questions-p4/" in raw_url:
+                path = raw_url.split("questions-p4/")[-1].split("?")[0].strip("/")
+                signed = create_signed_url("questions-p4", path)
+                if signed:
+                    doc["image_url"] = signed
+                    doc["image_base64"] = None
+            return doc
+
+        with ThreadPoolExecutor(max_workers=min(len(docs), 10)) as pool:
+            list(pool.map(_sign_doc, docs))
+
     apply_question_image_src_to_rows(docs)
+
     if user_id and docs:
         activity_rows = query_all(
             """
@@ -1101,6 +1157,7 @@ def practice_questions(request):
         'questions': questions,
         'user_id': user_id,
         'limit': None if user_id else guest_limit,
+        'paper': paper,
     })
 
 

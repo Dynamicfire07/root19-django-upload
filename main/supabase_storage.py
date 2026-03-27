@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import json
 import os
 import re
 import urllib.error
@@ -167,3 +168,35 @@ def upload_question_base64(question_id: str, image_base64: str) -> dict:
         "content_type": content_type,
         "size_bytes": len(content),
     }
+
+
+def create_signed_url(bucket_name: str, path: str, expires_in: int = 3600) -> str | None:
+    """Create a temporary signed URL for a private bucket object."""
+    config = get_supabase_storage_config()
+    if not config:
+        return None
+    
+    # Supabase expects 'expiresIn' in JSON body for POST to /object/sign/bucket/path
+    sign_url = (
+        f"{config.url}/storage/v1/object/sign/"
+        f"{urllib.parse.quote(bucket_name, safe='')}/"
+        f"{urllib.parse.quote(path, safe='/')}"
+    )
+    payload = json.dumps({"expiresIn": expires_in}).encode("utf-8")
+    
+    req = urllib.request.Request(sign_url, data=payload, method="POST")
+    req.add_header("Authorization", f"Bearer {config.service_role_key}")
+    req.add_header("apikey", config.service_role_key)
+    req.add_header("Content-Type", "application/json")
+    
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            # 'signedURL' is the relative path from the storage root like /object/sign/...
+            token = data.get("signedURL") or data.get("signedUrl")
+            if not token:
+                return None
+            return f"{config.url}/storage/v1{token}"
+    except Exception as e:
+        print(f"Error creating signed URL for {bucket_name}/{path}: {e}")
+        return None

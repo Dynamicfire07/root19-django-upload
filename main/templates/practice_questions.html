@@ -88,7 +88,7 @@
                 <section class="question-viewport">
                     <div id="question-container">
                         {% for question in questions %}
-                            {% include '_question_stage_card.html' with question=question mode='practice' %}
+                            {% include '_question_stage_card.html' with question=question mode='practice' paper=paper %}
                         {% endfor %}
                     </div>
                 </section>

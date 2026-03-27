@@ -62,7 +62,15 @@
 
         <div class="qb-card">
             <form id="filter-form" class="row g-4">
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <label for="paper_type" class="form-label fw-semibold">Paper</label>
+                    <select id="paper_type" class="form-select">
+                        <option value="2" selected>Paper 2 (MCQ)</option>
+                        <option value="4">Paper 4 (Theory)</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
                     <label for="session_code" class="form-label fw-semibold">Session</label>
                     <select id="session_code" class="form-select">
                         <option value="" selected>All sessions (random)</option>
@@ -72,7 +80,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="subtopic" class="form-label fw-semibold">Subtopic</label>
                     <select id="subtopic" class="form-select" disabled>
                         <option value="" selected>All subtopics (random)</option>
@@ -95,21 +103,59 @@
     </div>
 
     <script>
+        $('#paper_type').change(function () {
+            const paper = $(this).val();
+            const sessionDropdown = $('#session_code');
+            
+            if (paper === '4') {
+                // For Paper 4, only allow 625
+                sessionDropdown.find('option').each(function() {
+                    const val = $(this).val();
+                    if (val && val !== '625') {
+                        $(this).hide();
+                    } else {
+                        $(this).show();
+                    }
+                });
+                if (sessionDropdown.val() !== '625') {
+                    sessionDropdown.val(''); // Default to all (handled as 625 in backend for Paper 4)
+                }
+            } else {
+                sessionDropdown.find('option').show();
+            }
+            
+            // Reload subtopics
+            sessionDropdown.trigger('change');
+        });
+
         $('#session_code').change(function () {
             const sessionCode = $(this).val();
+            const paper = $('#paper_type').val();
             const subtopicDropdown = $('#subtopic');
+            
             // Reset subtopics to default state before loading
             subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
 
             // If no session chosen, keep "all subtopics" and enable start
             if (!sessionCode) {
-                subtopicDropdown.prop('disabled', false);
+                // For paper 4, we still want subtopics if they select "all" (which is 625)
+                // Let's actually always load subtopics if paper 4 is selected regardless of sessionCode being empty or 625
+                if (paper === '4') {
+                    loadSubtopics('625', paper);
+                } else {
+                    subtopicDropdown.prop('disabled', false);
+                }
                 return;
             }
 
+            loadSubtopics(sessionCode, paper);
+        });
+
+        function loadSubtopics(sessionCode, paper) {
+            const subtopicDropdown = $('#subtopic');
             subtopicDropdown.prop('disabled', true).empty().append('<option value="" selected>Loading...</option>');
 
-            $.get('/get-subtopics/', { session_code: sessionCode })
+            $.get('/get-subtopics/', { session_code: sessionCode, paper: paper })
                 .done(function (data) {
                     subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
                     (data.subtopics || []).forEach(subtopic => {
@@ -122,12 +168,14 @@
                     subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
                     subtopicDropdown.prop('disabled', false);
                 });
-        });
+        }
         
         $('#start-practice').click(function () {
+            const paper = $('#paper_type').val() || '2';
             const sessionCode = $('#session_code').val() || '';
             const subtopic = $('#subtopic').val() || '';
             const params = [];
+            params.push(`paper=${encodeURIComponent(paper)}`);
             if (sessionCode) params.push(`session_code=${encodeURIComponent(sessionCode)}`);
             if (subtopic) params.push(`subtopic=${encodeURIComponent(subtopic)}`);
             const query = params.length ? `?${params.join('&')}` : '';
