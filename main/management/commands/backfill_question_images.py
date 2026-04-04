@@ -111,7 +111,7 @@ class Command(BaseCommand):
                     upload_meta = upload_question_base64(qid, image_base64)
                     if not dry_run:
                         execute(
-                            "UPDATE questions SET image_key = %s, image_url = %s WHERE question_id = %s",
+                            "UPDATE questions SET image_key = %s, image_url = %s, image_base64 = '' WHERE question_id = %s",
                             (upload_meta["image_key"], upload_meta["image_url"], qid),
                         )
                     migrated += 1

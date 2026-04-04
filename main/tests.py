@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory, SimpleTestCase
 
+from . import question_images
 from . import views
 
 
@@ -358,3 +359,22 @@ class APISubtopicsEndpointTests(SimpleTestCase):
         self.assertEqual(response.status_code, 400)
         body = json.loads(response.content.decode("utf-8"))
         self.assertIn("Invalid subject", body.get("error", ""))
+
+
+class QuestionImageSourceTests(SimpleTestCase):
+    @patch("main.question_images.build_public_url_from_key")
+    def test_prefers_image_key_when_url_missing(self, mock_build_public_url_from_key):
+        mock_build_public_url_from_key.return_value = "https://cdn.example.com/questions/q1.png"
+
+        image_src = question_images.build_question_image_src("", "", "questions/q1.png")
+
+        self.assertEqual(image_src, "https://cdn.example.com/questions/q1.png")
+        mock_build_public_url_from_key.assert_called_once_with("questions/q1.png")
+
+    @patch("main.question_images.build_public_url_from_key")
+    def test_falls_back_to_base64_when_key_cannot_resolve(self, mock_build_public_url_from_key):
+        mock_build_public_url_from_key.return_value = None
+
+        image_src = question_images.build_question_image_src("", "abc123", "questions/q1.png")
+
+        self.assertEqual(image_src, "data:image/png;base64,abc123")
