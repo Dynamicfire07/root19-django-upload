@@ -2142,14 +2142,49 @@ def api_question_detail(request, question_id: str):
     return JsonResponse(payload)
 
 
+def _grade_question_answer(question_id: _t.Any, selected_answer: _t.Any) -> tuple[dict | None, str, bool]:
+    """Return the canonical answer record plus the computed correctness."""
+    normalized_question_id = str(question_id or "").strip()
+    normalized_selected = str(selected_answer or "").strip()
+    question = query_one(
+        "SELECT question_id, answer FROM questions WHERE question_id = %s",
+        (normalized_question_id,),
+    )
+    correct_answer = (question or {}).get("answer") or ""
+    is_correct = _normalize_answer(normalized_selected) == _normalize_answer(correct_answer)
+    return question, correct_answer, is_correct
+
+
 @csrf_exempt
+@require_POST
 def check_answer(request):
-    """Check if a submitted answer is correct."""
-    question_id = request.POST.get('question_id')
-    selected_answer = request.POST.get('selected_answer')
-    doc = query_one("SELECT answer FROM questions WHERE question_id = %s", (question_id,))
-    is_correct = doc and doc.get('answer') == selected_answer
-    return JsonResponse({'is_correct': is_correct})
+    """Check a submitted answer against the canonical question answer."""
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            data = json.loads(request.body.decode("utf-8"))
+        else:
+            data = request.POST
+    except Exception:
+        data = {}
+
+    question_id = (data.get("question_id") or "").strip()
+    selected_answer = (data.get("selected_answer") or "").strip()
+
+    if not question_id:
+        return JsonResponse({"error": "question_id is required."}, status=400)
+    if not selected_answer:
+        return JsonResponse({"error": "selected_answer is required."}, status=400)
+
+    question, correct_answer, is_correct = _grade_question_answer(question_id, selected_answer)
+    if not question:
+        return JsonResponse({"error": "Question not found."}, status=404)
+
+    return JsonResponse(
+        {
+            "is_correct": is_correct,
+            "correct_answer": correct_answer,
+        }
+    )
 
 
 @csrf_exempt
@@ -2448,7 +2483,14 @@ def update_activity(request):
                     "correct": bool(activity.get("correct")),
                 }
             )
-        correct = bool(data.get("correct", False))
+        selected_answer = (data.get("selected_answer") or "").strip()
+        if not selected_answer:
+            return JsonResponse({"error": "selected_answer is required."}, status=400)
+
+        question, correct_answer, correct = _grade_question_answer(question_id, selected_answer)
+        if not question:
+            return JsonResponse({"error": "Question not found."}, status=404)
+
         time_took = None
         started = activity.get("time_started")
         if started:
@@ -2458,7 +2500,14 @@ def update_activity(request):
                 started = started.replace(tzinfo=timezone.utc)
             time_took = now - started
             updates["time_took"] = str(time_took)
-        updates.update({"solved": True, "correct": correct})
+        updates.update(
+            {
+                "solved": True,
+                "correct": correct,
+                "selected_answer": selected_answer,
+                "correct_answer": correct_answer,
+            }
+        )
         execute(
             "UPDATE user_activity SET solved = %s, correct = %s, time_took = %s WHERE user_id = %s AND question_id = %s",
             (True, correct, time_took, user_id, question_id),
