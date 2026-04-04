@@ -772,7 +772,7 @@ def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list
 
     rows = query_all(
         """
-        SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_url, answer
+        SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_key, image_url, answer
         FROM questions WHERE question_id = ANY(%s)
         """,
         (question_ids,),
@@ -804,7 +804,11 @@ def _build_duel_comparison(duel: dict, user_id: _t.Optional[str] = None) -> list
             return (str(answer_val) or "").strip().lower() == correct_norm
 
         saved_meta = saved.get(qid, {})
-        image_src = build_question_image_src(meta.get("image_url"), meta.get("image_base64"))
+        image_src = build_question_image_src(
+            meta.get("image_url"),
+            meta.get("image_base64"),
+            meta.get("image_key"),
+        )
         comparison.append(
             {
                 "order": idx,
@@ -1064,7 +1068,7 @@ def practice_questions(request):
 
     docs = query_all(
         f"""
-        SELECT question_id, image_base64, image_url, answer, session_code, subtopic
+        SELECT question_id, image_base64, image_key, image_url, answer, session_code, subtopic
         FROM questions
         WHERE {where_sql}
         ORDER BY RANDOM()
@@ -1427,7 +1431,7 @@ def saved_questions(request):
 
     saved = query_all(
         """
-        SELECT q.question_id, q.image_base64, q.image_url, q.answer, q.session_code, q.subtopic,
+        SELECT q.question_id, q.image_base64, q.image_key, q.image_url, q.answer, q.session_code, q.subtopic,
                ua.bookmarked, ua.starred, ua.time_started
         FROM user_activity ua
         JOIN questions q ON q.question_id = ua.question_id
@@ -1613,7 +1617,7 @@ def duel_play(request, duel_id: int):
     if question_ids:
         rows = query_all(
             """
-            SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_url
+            SELECT question_id, extracted_text, session_code, subtopic, image_base64, image_key, image_url
             FROM questions WHERE question_id = ANY(%s)
             """,
             (question_ids,),
@@ -1743,9 +1747,14 @@ def _get_question_table_columns() -> set:
     return _question_columns_cache
 
 
-def _build_absolute_image_link(request, image_url: _t.Optional[str], image_base64: _t.Optional[str]) -> _t.Optional[str]:
+def _build_absolute_image_link(
+    request,
+    image_url: _t.Optional[str],
+    image_base64: _t.Optional[str],
+    image_key: _t.Optional[str] = None,
+) -> _t.Optional[str]:
     """Return an absolute URL-like image link when possible."""
-    image_src = build_question_image_src(image_url, image_base64)
+    image_src = build_question_image_src(image_url, image_base64, image_key)
     if not image_src:
         return None
     if image_src.startswith(("http://", "https://", "data:")):
@@ -1763,6 +1772,7 @@ def _serialize_question_api_row(request, row: dict) -> dict:
         request,
         payload.get("image_url"),
         payload.get("image_base64"),
+        payload.get("image_key"),
     )
     payload["image_src"] = payload["image_link"]
     if not payload.get("question"):
@@ -2675,6 +2685,7 @@ def staff_question_tester(request):
                     selected["image_src"] = build_question_image_src(
                         selected.get("image_url"),
                         selected.get("image_base64"),
+                        selected.get("image_key"),
                     )
                     expected_answer = (selected.get("answer") or "").strip()
                     is_correct = _normalize_answer(submitted_answer) == _normalize_answer(expected_answer)
@@ -2694,7 +2705,7 @@ def staff_question_tester(request):
         selected = query_one(
             """
             SELECT question_id, session_code, session, year, paper_code, variant,
-                   file_question, subtopic, extracted_text, image_base64, image_url, answer
+                   file_question, subtopic, extracted_text, image_base64, image_key, image_url, answer
             FROM questions
             WHERE question_id = %s
             """,
@@ -2704,6 +2715,7 @@ def staff_question_tester(request):
             selected["image_src"] = build_question_image_src(
                 selected.get("image_url"),
                 selected.get("image_base64"),
+                selected.get("image_key"),
             )
             search_results = [selected]
         else:
@@ -2917,6 +2929,7 @@ def staff_question_report_detail(request, report_id: int):
             q.file_question,
             q.extracted_text,
             q.image_base64,
+            q.image_key,
             q.image_url,
             u.name AS reporter_name,
             u.email AS reporter_email
@@ -2935,6 +2948,7 @@ def staff_question_report_detail(request, report_id: int):
     report["image_src"] = build_question_image_src(
         report.get("image_url"),
         report.get("image_base64"),
+        report.get("image_key"),
     )
 
     context = {
@@ -3455,13 +3469,17 @@ def chat_share_question(request):
         return JsonResponse({"error": "Message too long (max 1000 characters)."}, status=400)
 
     question = query_one(
-        "SELECT question_id, image_base64, image_url FROM questions WHERE question_id = %s",
+        "SELECT question_id, image_base64, image_key, image_url FROM questions WHERE question_id = %s",
         (question_id,),
     )
     if not question:
         return JsonResponse({"error": "Question not found."}, status=404)
 
-    image_src = build_question_image_src(question.get("image_url"), question.get("image_base64"))
+    image_src = build_question_image_src(
+        question.get("image_url"),
+        question.get("image_base64"),
+        question.get("image_key"),
+    )
     body = message_body or f"Shared question {question_id}"
 
     execute(

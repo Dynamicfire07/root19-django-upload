@@ -49,11 +49,13 @@ class Command(BaseCommand):
                         image_base64 = row.get('ImageBase64', '').strip()
                         image_key = None
                         image_url = None
+                        stored_image_base64 = image_base64
                         if image_base64 and storage_enabled:
                             try:
                                 uploaded = upload_question_base64(question_id, image_base64)
                                 image_key = uploaded.get("image_key")
                                 image_url = uploaded.get("image_url")
+                                stored_image_base64 = ""
                             except StorageUploadError as upload_error:
                                 self.stderr.write(
                                     self.style.ERROR(
@@ -94,7 +96,7 @@ class Command(BaseCommand):
                                 row.get('File_Question', '').strip(),
                                 row.get('Subtopic', '').strip(),
                                 row.get('ExtractedText', '').strip(),
-                                image_base64,
+                                stored_image_base64,
                                 image_key,
                                 image_url,
                                 row.get('Answer', '').strip(),

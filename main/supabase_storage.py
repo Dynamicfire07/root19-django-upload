@@ -128,6 +128,19 @@ def _build_public_url(config: SupabaseStorageConfig, key: str) -> str:
     return f"{config.public_base_url}/{urllib.parse.quote(key, safe='/')}"
 
 
+def build_public_url_from_key(key: str) -> str | None:
+    """Resolve a stored object key into a public URL when storage is configured."""
+    normalized_key = (key or "").strip()
+    if not normalized_key:
+        return None
+
+    config = get_supabase_storage_config()
+    if not config:
+        return None
+
+    return _build_public_url(config, normalized_key)
+
+
 def _upload_binary(config: SupabaseStorageConfig, key: str, content: bytes, content_type: str) -> None:
     object_url = (
         f"{config.url}/storage/v1/object/"

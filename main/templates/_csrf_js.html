@@ -1,0 +1,17 @@
+<script>
+  (function () {
+    if (window.R19_getCsrfToken) return;
+
+    window.R19_getCsrfToken = function () {
+      const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("csrftoken="));
+      return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : "";
+    };
+
+    window.R19_withCsrf = function (headers) {
+      const token = window.R19_getCsrfToken();
+      return token ? Object.assign({}, headers, { "X-CSRFToken": token }) : Object.assign({}, headers);
+    };
+  })();
+</script>

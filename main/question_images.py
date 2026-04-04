@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .db import execute
+from .supabase_storage import build_public_url_from_key
 
 _question_image_columns_ready = False
 
@@ -18,11 +19,19 @@ def ensure_question_image_columns() -> None:
     _question_image_columns_ready = True
 
 
-def build_question_image_src(image_url: str | None, image_base64: str | None) -> str | None:
-    """Prefer CDN URL, otherwise normalize Base64 into a browser-ready src string."""
+def build_question_image_src(
+    image_url: str | None,
+    image_base64: str | None,
+    image_key: str | None = None,
+) -> str | None:
+    """Prefer stored URLs/keys, otherwise normalize Base64 into a browser-ready src string."""
     url_val = (image_url or "").strip()
     if url_val:
         return url_val
+
+    key_url = build_public_url_from_key(image_key or "")
+    if key_url:
+        return key_url
 
     b64_val = (image_base64 or "").strip()
     if not b64_val:
@@ -34,7 +43,11 @@ def build_question_image_src(image_url: str | None, image_base64: str | None) ->
 
 def apply_question_image_src(row: dict) -> dict:
     """Attach `image_src` key to a question row dictionary."""
-    row["image_src"] = build_question_image_src(row.get("image_url"), row.get("image_base64"))
+    row["image_src"] = build_question_image_src(
+        row.get("image_url"),
+        row.get("image_base64"),
+        row.get("image_key"),
+    )
     return row
 
 
