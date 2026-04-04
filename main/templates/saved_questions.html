@@ -209,7 +209,13 @@
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ user_id: USER_ID, ...payload }),
-                }).catch(() => null);
+                })
+                .then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, data })))
+                .catch(() => ({ ok: false, data: { error: "Could not save your answer right now." } }));
+            }
+
+            function getCorrectAnswer(questionEl) {
+                return questionEl?.dataset.answer || "";
             }
 
             function getCurrentQuestion() {
@@ -241,7 +247,7 @@
 
             function syncAnswerButtons(questionEl) {
                 const selectedAnswer = questionEl.dataset.selectedAnswer || "";
-                const correctAnswer = questionEl.dataset.answer || "";
+                const correctAnswer = getCorrectAnswer(questionEl);
                 const answered = questionEl.dataset.answered === "true";
                 const status = questionEl.dataset.status || "idle";
 
@@ -274,7 +280,7 @@
                 const statusPill = questionEl.querySelector('[data-role="status-pill"]');
                 const status = questionEl.dataset.status || "idle";
                 const selectedAnswer = questionEl.dataset.selectedAnswer || "";
-                const correctAnswer = questionEl.dataset.answer || "";
+                const correctAnswer = getCorrectAnswer(questionEl);
                 let tone = "idle";
                 let title = "Select an answer to see your result.";
                 let detail = "Use this queue to revisit the questions you care about most.";
@@ -317,7 +323,7 @@
 
                 const status = questionEl.dataset.status || "idle";
                 const selectedAnswer = questionEl.dataset.selectedAnswer || "";
-                const correctAnswer = questionEl.dataset.answer || "";
+                const correctAnswer = getCorrectAnswer(questionEl);
                 const answered = questionEl.dataset.answered === "true";
 
                 if (mobileDockQuestion) {
@@ -385,9 +391,9 @@
                 if (currentQuestion.dataset.status === "correct") {
                     setHint("Correct answer locked in. Move on when you are ready.");
                 } else if (currentQuestion.dataset.status === "wrong") {
-                    setHint(`Review note: the correct answer is ${currentQuestion.dataset.answer}.`);
+                    setHint(`Review note: the correct answer is ${getCorrectAnswer(currentQuestion)}.`);
                 } else if (currentQuestion.dataset.status === "revealed") {
-                    setHint(`Answer revealed: ${currentQuestion.dataset.answer}.`);
+                    setHint(`Answer revealed: ${getCorrectAnswer(currentQuestion)}.`);
                 } else if (currentQuestion.dataset.starred !== "true" && currentQuestion.dataset.bookmarked !== "true") {
                     setHint("This question is no longer saved. Refresh the page to clear it from the queue.");
                 } else {
@@ -427,20 +433,31 @@
                 }
             }
 
-            function handleAnswer(questionEl, selectedAnswer) {
-                if (!questionEl || questionEl.dataset.answered === "true") return;
+            async function handleAnswer(questionEl, selectedAnswer) {
+                if (!questionEl || questionEl.dataset.answered === "true" || questionEl.dataset.answering === "true") return;
+                questionEl.dataset.answering = "true";
 
-                const correctAnswer = questionEl.dataset.answer;
-                const isCorrect = selectedAnswer === correctAnswer;
+                const response = await updateActivity({
+                    question_id: questionEl.dataset.questionId,
+                    action: "answer",
+                    selected_answer: selectedAnswer,
+                });
+                if (!response?.ok) {
+                    delete questionEl.dataset.answering;
+                    setHint(response?.data?.error || "Could not check that answer. Try again.");
+                    return;
+                }
+
+                const result = response.data || {};
+                const correctAnswer = result.correct_answer || getCorrectAnswer(questionEl);
+                const isCorrect = Boolean(result.correct);
+                if (correctAnswer) {
+                    questionEl.dataset.answer = correctAnswer;
+                }
                 questionEl.dataset.selectedAnswer = selectedAnswer;
                 questionEl.dataset.answered = "true";
                 questionEl.dataset.status = isCorrect ? "correct" : "wrong";
-
-                updateActivity({
-                    question_id: questionEl.dataset.questionId,
-                    action: "answer",
-                    correct: isCorrect,
-                });
+                delete questionEl.dataset.answering;
 
                 syncQuestionCard(questionEl);
                 updateSummaryMetrics();
@@ -488,7 +505,7 @@
                         }
 
                         if (revealModalEl) {
-                            revealModalEl.querySelector(".modal-body").textContent = `The correct answer is ${questionEl.dataset.answer}.`;
+                            revealModalEl.querySelector(".modal-body").textContent = `The correct answer is ${getCorrectAnswer(questionEl)}.`;
                             if (revealModal) revealModal.show();
                         }
                     });

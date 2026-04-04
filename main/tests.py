@@ -20,13 +20,17 @@ class UpdateActivityTests(SimpleTestCase):
     @patch("main.views.query_one")
     def test_first_answer_records_result(self, mock_query_one, mock_get_activity, mock_execute):
         """First answer attempt should be recorded and return status ok."""
-        mock_query_one.return_value = {"user_id": self.user_id}
+        mock_query_one.side_effect = [
+            {"user_id": self.user_id},
+            {"question_id": self.question_id, "answer": "A"},
+        ]
         mock_get_activity.return_value = {"solved": False, "time_started": None}
         payload = {
             "user_id": self.user_id,
             "question_id": self.question_id,
             "action": "answer",
-            "correct": True,
+            "selected_answer": "A",
+            "correct": False,
         }
         request = self.factory.post(
             "/update-activity/",
@@ -40,6 +44,7 @@ class UpdateActivityTests(SimpleTestCase):
         self.assertEqual(body["status"], "ok")
         self.assertTrue(body["solved"])
         self.assertTrue(body["correct"])
+        self.assertEqual(body["correct_answer"], "A")
         mock_execute.assert_called_once_with(
             "UPDATE user_activity SET solved = %s, correct = %s, time_took = %s WHERE user_id = %s AND question_id = %s",
             (True, True, None, self.user_id, self.question_id),
@@ -56,7 +61,7 @@ class UpdateActivityTests(SimpleTestCase):
             "user_id": self.user_id,
             "question_id": self.question_id,
             "action": "answer",
-            "correct": True,
+            "selected_answer": "A",
         }
         request = self.factory.post(
             "/update-activity/",
@@ -122,6 +127,23 @@ class UpdateActivityValidationTests(SimpleTestCase):
         self.assertEqual(response.status_code, 400)
         body = json.loads(response.content.decode("utf-8"))
         self.assertEqual(body.get("error"), "Invalid action")
+
+    @patch("main.views.query_one")
+    @patch("main.views.get_or_create_activity")
+    def test_answer_requires_selected_answer(self, mock_get_activity, mock_query_one):
+        mock_query_one.return_value = {"user_id": self.user_id}
+        mock_get_activity.return_value = {"solved": False}
+        request = self._post(
+            {
+                "user_id": self.user_id,
+                "question_id": self.question_id,
+                "action": "answer",
+            }
+        )
+        response = views.update_activity(request)
+        self.assertEqual(response.status_code, 400)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(body.get("error"), "selected_answer is required.")
 
     @patch("main.views.execute")
     @patch("main.views.get_or_create_activity")
@@ -190,7 +212,10 @@ class UpdateActivityValidationTests(SimpleTestCase):
     @patch("main.views.get_or_create_activity")
     @patch("main.views.query_one")
     def test_answer_records_time_delta(self, mock_query_one, mock_get_activity, mock_execute):
-        mock_query_one.return_value = {"user_id": self.user_id}
+        mock_query_one.side_effect = [
+            {"user_id": self.user_id},
+            {"question_id": self.question_id, "answer": "B"},
+        ]
         started_at = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         fixed_now = started_at + timedelta(seconds=5)
         mock_get_activity.return_value = {"solved": False, "time_started": started_at}
@@ -206,6 +231,7 @@ class UpdateActivityValidationTests(SimpleTestCase):
                     "user_id": self.user_id,
                     "question_id": self.question_id,
                     "action": "answer",
+                    "selected_answer": "A",
                     "correct": False,
                 }
             )
@@ -214,6 +240,8 @@ class UpdateActivityValidationTests(SimpleTestCase):
         body = json.loads(response.content.decode("utf-8"))
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["time_took"], str(fixed_now - started_at))
+        self.assertFalse(body["correct"])
+        self.assertEqual(body["correct_answer"], "B")
         mock_execute.assert_called_once_with(
             "UPDATE user_activity SET solved = %s, correct = %s, time_took = %s WHERE user_id = %s AND question_id = %s",
             (True, False, fixed_now - started_at, self.user_id, self.question_id),
@@ -226,23 +254,25 @@ class CheckAnswerTests(SimpleTestCase):
 
     @patch("main.views.query_one")
     def test_correct_answer(self, mock_query_one):
-        mock_query_one.return_value = {"answer": "A"}
+        mock_query_one.return_value = {"question_id": "Q1", "answer": "A"}
         request = self.factory.post(
             "/check-answer/", data={"question_id": "Q1", "selected_answer": "A"}
         )
         response = views.check_answer(request)
         body = json.loads(response.content.decode("utf-8"))
         self.assertTrue(body["is_correct"])
+        self.assertEqual(body["correct_answer"], "A")
 
     @patch("main.views.query_one")
     def test_incorrect_answer(self, mock_query_one):
-        mock_query_one.return_value = {"answer": "B"}
+        mock_query_one.return_value = {"question_id": "Q1", "answer": "B"}
         request = self.factory.post(
             "/check-answer/", data={"question_id": "Q1", "selected_answer": "A"}
         )
         response = views.check_answer(request)
         body = json.loads(response.content.decode("utf-8"))
         self.assertFalse(body["is_correct"])
+        self.assertEqual(body["correct_answer"], "B")
 
 
 class APIKeyProtectionTests(SimpleTestCase):
