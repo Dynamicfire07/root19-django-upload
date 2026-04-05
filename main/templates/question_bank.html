@@ -102,23 +102,27 @@
         </div>
     </div>
 
+    {{ paper4_session_options|json_script:"paper4-session-options" }}
     <script>
+        const paper4Options = JSON.parse(document.getElementById('paper4-session-options').textContent || '[]');
+        const paper4SessionCodeSet = new Set(paper4Options.map(option => String(option.code)));
+
         $('#paper_type').change(function () {
             const paper = $(this).val();
             const sessionDropdown = $('#session_code');
             
             if (paper === '4') {
-                // For Paper 4, only allow 625
+                // For Paper 4, only allow subjects that actually exist in questions_v2.
                 sessionDropdown.find('option').each(function() {
-                    const val = $(this).val();
-                    if (val && val !== '625') {
+                    const val = String($(this).val() || '');
+                    if (val && !paper4SessionCodeSet.has(val)) {
                         $(this).hide();
                     } else {
                         $(this).show();
                     }
                 });
-                if (sessionDropdown.val() !== '625') {
-                    sessionDropdown.val(''); // Default to all (handled as 625 in backend for Paper 4)
+                if (sessionDropdown.val() && !paper4SessionCodeSet.has(String(sessionDropdown.val()))) {
+                    sessionDropdown.val('');
                 }
             } else {
                 sessionDropdown.find('option').show();
@@ -136,15 +140,9 @@
             // Reset subtopics to default state before loading
             subtopicDropdown.empty().append('<option value="" selected>All subtopics (random)</option>');
 
-            // If no session chosen, keep "all subtopics" and enable start
+            // If no session chosen, load all available subtopics for the selected paper.
             if (!sessionCode) {
-                // For paper 4, we still want subtopics if they select "all" (which is 625)
-                // Let's actually always load subtopics if paper 4 is selected regardless of sessionCode being empty or 625
-                if (paper === '4') {
-                    loadSubtopics('625', paper);
-                } else {
-                    subtopicDropdown.prop('disabled', false);
-                }
+                loadSubtopics('', paper);
                 return;
             }
 

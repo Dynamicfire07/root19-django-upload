@@ -858,12 +858,13 @@ def get_total_questions_count() -> int:
     return total
 
 
-def get_session_options() -> list:
+def get_session_options(table_name: str = "questions", cache_key: str | None = None) -> list:
     """Return cached list of session codes with labels for dropdowns."""
-    cached = cache.get(SESSION_OPTIONS_CACHE_KEY, _CACHE_MISS)
+    resolved_cache_key = cache_key or f"{SESSION_OPTIONS_CACHE_KEY}:{table_name}"
+    cached = cache.get(resolved_cache_key, _CACHE_MISS)
     if cached is not _CACHE_MISS:
         return cached
-    rows = query_all("SELECT DISTINCT session_code FROM questions ORDER BY session_code")
+    rows = query_all(f"SELECT DISTINCT session_code FROM {table_name} ORDER BY session_code")
     session_options = [
         {
             "code": r['session_code'],
@@ -872,7 +873,7 @@ def get_session_options() -> list:
         }
         for r in rows
     ]
-    cache.set(SESSION_OPTIONS_CACHE_KEY, session_options, SESSION_OPTIONS_TTL)
+    cache.set(resolved_cache_key, session_options, SESSION_OPTIONS_TTL)
     return session_options
 
 
@@ -943,7 +944,8 @@ def update_weekly_champion():
 
 def question_bank(request):
     """Render the initial page with session codes."""
-    session_options = get_session_options()
+    session_options = get_session_options("questions")
+    paper4_session_options = get_session_options("questions_v2")
     question_bank_notice = (
         QuestionBankNotice.objects.filter(is_active=True)
         .exclude(title="", message="")
@@ -955,6 +957,7 @@ def question_bank(request):
         'question_bank.html',
         {
             'session_options': session_options,
+            'paper4_session_options': paper4_session_options,
             'question_bank_notice': question_bank_notice,
         },
     )
@@ -1031,26 +1034,25 @@ def api_options_reference(request):
 
 def get_subtopics(request):
     """Return subtopics for a given session code and paper type."""
-    session_code = request.GET.get('session_code')
+    session_code = (request.GET.get('session_code') or '').strip()
     paper = request.GET.get('paper', '2')
-    if not session_code:
-        return JsonResponse({'error': 'Session code is required'}, status=400)
 
     # Resolve table name based on paper
     table_name = 'questions_v2' if str(paper) == '4' else 'questions'
-    
-    # Restrict paper 4 to session 625
-    if str(paper) == '4' and session_code != '625':
-        return JsonResponse({'subtopics': []})
 
-    cache_key = f"subtopics:{session_code}:{paper}:{table_name}"
+    cache_key = f"subtopics:{session_code or 'all'}:{paper}:{table_name}"
     subtopics = cache.get(cache_key)
     if subtopics is None:
         try:
-            rows = query_all(
-                f"SELECT DISTINCT subtopic FROM {table_name} WHERE session_code = %s",
-                (session_code,),
-            )
+            if session_code:
+                rows = query_all(
+                    f"SELECT DISTINCT subtopic FROM {table_name} WHERE session_code = %s ORDER BY subtopic",
+                    (session_code,),
+                )
+            else:
+                rows = query_all(
+                    f"SELECT DISTINCT subtopic FROM {table_name} ORDER BY subtopic"
+                )
             subtopics = [r['subtopic'] for r in rows if r.get('subtopic')]
             cache.set(cache_key, subtopics, SUBTOPIC_CACHE_TTL)
         except Exception as e:
@@ -1078,10 +1080,7 @@ def practice_questions(request):
     conditions = []
     params = []
 
-    if paper == '4':
-        # For paper 4, force session 625
-        conditions.append("session_code = '625'")
-    elif session_code:
+    if session_code:
         conditions.append("session_code = %s")
         params.append(session_code)
 

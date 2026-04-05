@@ -391,6 +391,69 @@ class APISubtopicsEndpointTests(SimpleTestCase):
         self.assertIn("Invalid subject", body.get("error", ""))
 
 
+class GetSubtopicsTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch("main.views.query_all")
+    def test_get_subtopics_for_paper4_uses_selected_session(self, mock_query_all):
+        mock_query_all.return_value = [{"subtopic": "Rates of reaction"}]
+
+        request = self.factory.get("/get-subtopics/?session_code=620&paper=4")
+        response = views.get_subtopics(request)
+
+        self.assertEqual(response.status_code, 200)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(body.get("subtopics"), ["Rates of reaction"])
+        mock_query_all.assert_called_once_with(
+            "SELECT DISTINCT subtopic FROM questions_v2 WHERE session_code = %s ORDER BY subtopic",
+            ("620",),
+        )
+
+    @patch("main.views.query_all")
+    def test_get_subtopics_without_session_returns_all_for_selected_paper(self, mock_query_all):
+        mock_query_all.return_value = [{"subtopic": "Electricity"}, {"subtopic": "Organic chemistry"}]
+
+        request = self.factory.get("/get-subtopics/?paper=4")
+        response = views.get_subtopics(request)
+
+        self.assertEqual(response.status_code, 200)
+        body = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(body.get("subtopics"), ["Electricity", "Organic chemistry"])
+        mock_query_all.assert_called_once_with(
+            "SELECT DISTINCT subtopic FROM questions_v2 ORDER BY subtopic"
+        )
+
+
+class PracticeQuestionsPaper4Tests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch("main.views.render")
+    @patch("main.views.apply_question_image_src_to_rows")
+    @patch("main.views.ensure_question_image_columns")
+    @patch("main.views.query_all")
+    def test_practice_questions_paper4_respects_selected_session(
+        self,
+        mock_query_all,
+        mock_ensure_columns,
+        mock_apply_image_src,
+        mock_render,
+    ):
+        mock_query_all.return_value = []
+        mock_render.return_value = object()
+
+        request = self.factory.get("/practice-questions/?paper=4&session_code=620")
+        request.session = {}
+        views.practice_questions(request)
+
+        query = mock_query_all.call_args[0][0]
+        params = mock_query_all.call_args[0][1]
+        self.assertIn("FROM questions_v2", query)
+        self.assertIn("session_code = %s", query)
+        self.assertEqual(params[0], "620")
+
+
 class QuestionImageSourceTests(SimpleTestCase):
     @patch("main.question_images.build_public_url_from_key")
     def test_prefers_image_key_when_url_missing(self, mock_build_public_url_from_key):
